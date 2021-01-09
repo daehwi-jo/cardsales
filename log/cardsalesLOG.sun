@@ -1,0 +1,275 @@
+2021/01/10 00:46:33          main.go: 116:  >> reCollects START .... [R0000000117:20210108] << 
+2021/01/10 00:46:33          main.go: 169:  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2021/01/10 00:46:33          main.go: 170:  >> collect START .... [3:R0000000117:20210108] << 
+2021/01/10 00:46:33          main.go: 180:  [INFO] 오늘=20210110, 조회일=20210108
+2021/01/10 00:46:33        cls_db.go:1069:  [INFO] query resp string : select a.BIZ_NUM, a.SVC_OPEN_DT, a.LN_FIRST_YN, a.LN_JOIN_TY, a.LN_ID, a.LN_PSW, a.LN_JOIN_STS_CD, IFNULL(b.BS_DT,'') as BS_DT, IFNULL(left(b.REG_DT,8),'') AS REG_DT, IFNULL(left(b.MOD_DT,8),'') AS MOD_DT, IFNULL(b.STS_CD,'') as STS_CD, IFNULL(b.ERR_CD,'') as ERRCD from cc_comp_inf a left join cc_sync_inf b on a.BIZ_NUM=b.BIZ_NUM and b.BS_DT=? where a.REST_ID=? and a.COMP_STS_CD=? and a.LN_JOIN_STS_CD=?;
+2021/01/10 00:46:33        cls_db.go:1070:  [INFO] params resp string : [20210108 R0000000117 1 1]
+2021/01/10 00:46:33          main.go: 204:  [INFO] 가맹점정보 (1건)([{1198619035 20200401 Y 1 youchan you123!@# 1 20210108 20210109 20210110 2 0006}]) 
+2021/01/10 00:46:33          main.go: 252:  [INFO][go-0] dateList ([20210102 20210103 20210104 20210105 20210106 20210107 20210108])
+2021/01/10 00:46:34          main.go: 265:  [INFO][go-0] login succes wait 100 ms(youchan) 
+2021/01/10 00:46:34          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/commonCode/merGrpCode) 
+2021/01/10 00:46:34          main.go: 279:  [INFO][go-0] getGrpId ([{1129077259 유창순대삼계탕  }]) 
+2021/01/10 00:46:34          main.go: 335:  [INFO][go-0] 수집일=20210102
+2021/01/10 00:46:34          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/approval/dayListAjax?stdDate=20210102&merGrpId=1129077259&cardCo=&merNo=) 
+2021/01/10 00:46:35          main.go: 486:  [INFO][go-0] getApproval: resp approval sum (1198619035:7건)({{26 748500 26 748500 0 0} [{01 KB카드 1 52000 1 52000 0 0               0           0} {19 농협NH카드 9 267500 9 267500 0 0               0           0} {11 롯데카드 4 76000 4 76000 0 0               0           0} {04 비씨카드 6 156000 6 156000 0 0               0           0} {13 삼성카드 3 127000 3 127000 0 0               0           0} {03 신한카드 1 40000 1 40000 0 0               0           0} {12 현대카드 2 30000 2 30000 0 0               0           0}] }) 
+2021/01/10 00:46:35        cls_db.go:1069:  [INFO] query resp string : select TOT_CNT, TOT_AMT, APRV_CNT, APRV_AMT, CAN_CNT, CAN_AMT from cc_aprv_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:46:35        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210102]
+2021/01/10 00:46:35          main.go: 492:  [INFO][go-0] getApproval: db approval sum (&{26 748500 26 748500 0 0}) 
+2021/01/10 00:46:35          main.go: 503:  [INFO][go-0] getApproval: db approval sum amt (748500) = (748500) 
+2021/01/10 00:46:35          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/purchase/day?q.flag=&q.stdYear=&q.stdMonth=&q.pageType=&q.searchDateCode=PCA_DATE&selAmt=0&selCnt=0&oldAmt=&q.oldMerNo=&q.oldMerGrpId=&q.oldSearchDate=&q.oldCardCo=&q.merGrpId=1129077259&q.cardCo=&q.merNo=&q.searchDate=20210102&q.dataPerPage=20) 
+2021/01/10 00:46:36        cls_db.go:1069:  [INFO] query resp string : select PCA_CNT, PCA_AMT, MER_FEE, PNT_FEE, ETC_FEE, TOT_FEE, VAT_AMT, OUTP_EXPT_AMT from cc_pca_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:46:36        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210102]
+2021/01/10 00:46:36          main.go: 747:  [INFO][go-0] getPurchase: db purchase sum (&{25 613500 6883 0 0 6883 0 606617}) 
+2021/01/10 00:46:36          main.go: 758:  [INFO][go-0] getPurchase: db purchase sum same (&{25 613500 6883 0 0 6883 0 606617}) 
+2021/01/10 00:46:36          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/payment/termListAjax?q.startDate=20210102&q.endDate=20210102&q.merGrpId=1129077259&q.cardCo=&q.merNo=) 
+2021/01/10 00:46:36        cls_db.go:1069:  [INFO] query resp string : select BIZ_NUM, BS_DT, SITE_CD, APRV_CNT, APRV_AMT, PCA_CNT, PCA_AMT, PAY_CNT, PAY_AMT, IFNULL(REG_DT,'') as REG_DT, IFNULL(MOD_DT,'') as MOD_DT, STS_CD, ERR_CD from cc_sync_inf where BIZ_NUM=? and BS_DT=? and SITE_CD=?;
+2021/01/10 00:46:36        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210102 1]
+2021/01/10 00:46:36        carddb.go: 170:  [INFO][go-0] syncInfo ({1198619035 20210102 1 26 748500 25 613500 0 0 20210103100002 20210110003041 2 0003}) 
+2021/01/10 00:46:36        cls_db.go:1094:  [INFO] query resp string : update cc_sync_inf set APRV_CNT=?, APRV_AMT=?, PCA_CNT=?, PCA_AMT=?, PAY_CNT=?, PAY_AMT=?, STS_CD=?, ERR_CD=?, MOD_DT=? where BIZ_NUM=? and BS_DT=? and SITE_CD=?
+2021/01/10 00:46:36        cls_db.go:1095:  [INFO] params resp string : [26 748500 25 613500 0 0 2 0003 20210110004636 1198619035 20210102 1]
+2021/01/10 00:46:36        cls_db.go:1120:  [INFO] 1 row affected 
+2021/01/10 00:47:36          main.go: 335:  [INFO][go-0] 수집일=20210102
+2021/01/10 00:47:36          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/approval/dayListAjax?stdDate=20210102&merGrpId=1129077259&cardCo=&merNo=) 
+2021/01/10 00:47:37          main.go: 486:  [INFO][go-0] getApproval: resp approval sum (1198619035:7건)({{26 748500 26 748500 0 0} [{01 KB카드 1 52000 1 52000 0 0               0           0} {19 농협NH카드 9 267500 9 267500 0 0               0           0} {11 롯데카드 4 76000 4 76000 0 0               0           0} {04 비씨카드 6 156000 6 156000 0 0               0           0} {13 삼성카드 3 127000 3 127000 0 0               0           0} {03 신한카드 1 40000 1 40000 0 0               0           0} {12 현대카드 2 30000 2 30000 0 0               0           0}] }) 
+2021/01/10 00:47:37        cls_db.go:1069:  [INFO] query resp string : select TOT_CNT, TOT_AMT, APRV_CNT, APRV_AMT, CAN_CNT, CAN_AMT from cc_aprv_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:47:37        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210102]
+2021/01/10 00:47:37          main.go: 492:  [INFO][go-0] getApproval: db approval sum (&{26 748500 26 748500 0 0}) 
+2021/01/10 00:47:37          main.go: 503:  [INFO][go-0] getApproval: db approval sum amt (748500) = (748500) 
+2021/01/10 00:47:37          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/purchase/day?q.flag=&q.stdYear=&q.stdMonth=&q.pageType=&q.searchDateCode=PCA_DATE&selAmt=0&selCnt=0&oldAmt=&q.oldMerNo=&q.oldMerGrpId=&q.oldSearchDate=&q.oldCardCo=&q.merGrpId=1129077259&q.cardCo=&q.merNo=&q.searchDate=20210102&q.dataPerPage=20) 
+2021/01/10 00:47:37        cls_db.go:1069:  [INFO] query resp string : select PCA_CNT, PCA_AMT, MER_FEE, PNT_FEE, ETC_FEE, TOT_FEE, VAT_AMT, OUTP_EXPT_AMT from cc_pca_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:47:37        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210102]
+2021/01/10 00:47:37          main.go: 747:  [INFO][go-0] getPurchase: db purchase sum (&{25 613500 6883 0 0 6883 0 606617}) 
+2021/01/10 00:47:37          main.go: 758:  [INFO][go-0] getPurchase: db purchase sum same (&{25 613500 6883 0 0 6883 0 606617}) 
+2021/01/10 00:47:37          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/payment/termListAjax?q.startDate=20210102&q.endDate=20210102&q.merGrpId=1129077259&q.cardCo=&q.merNo=) 
+2021/01/10 00:47:38        cls_db.go:1069:  [INFO] query resp string : select BIZ_NUM, BS_DT, SITE_CD, APRV_CNT, APRV_AMT, PCA_CNT, PCA_AMT, PAY_CNT, PAY_AMT, IFNULL(REG_DT,'') as REG_DT, IFNULL(MOD_DT,'') as MOD_DT, STS_CD, ERR_CD from cc_sync_inf where BIZ_NUM=? and BS_DT=? and SITE_CD=?;
+2021/01/10 00:47:38        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210102 1]
+2021/01/10 00:47:38        carddb.go: 170:  [INFO][go-0] syncInfo ({1198619035 20210102 1 26 748500 25 613500 0 0 20210103100002 20210110004636 2 0003}) 
+2021/01/10 00:47:38        cls_db.go:1094:  [INFO] query resp string : update cc_sync_inf set APRV_CNT=?, APRV_AMT=?, PCA_CNT=?, PCA_AMT=?, PAY_CNT=?, PAY_AMT=?, STS_CD=?, ERR_CD=?, MOD_DT=? where BIZ_NUM=? and BS_DT=? and SITE_CD=?
+2021/01/10 00:47:38        cls_db.go:1095:  [INFO] params resp string : [26 748500 25 613500 0 0 2 0003 20210110004738 1198619035 20210102 1]
+2021/01/10 00:47:38        cls_db.go:1120:  [INFO] 1 row affected 
+2021/01/10 00:47:38        cls_db.go:1069:  [INFO] query resp string : select COUNT(a.BIZ_NUM), 0 from cc_sync_inf a, cc_comp_inf b where a.BS_DT=? and a.ERR_CD=? and a.BIZ_NUM = b.BIZ_NUM and b.REST_ID=?
+2021/01/10 00:47:38        cls_db.go:1070:  [INFO] params resp string : [20210108 0000 R0000000117]
+2021/01/10 00:47:38          main.go: 326:  >> collect END.... [3:R0000000117:20210108][0/1] << 
+2021/01/10 00:47:38          main.go: 327:  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2021/01/10 00:47:38          main.go: 128:  >> reCollects END .... [R0000000117:20210108] << 
+2021/01/10 00:51:38          main.go:  28:  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2021/01/10 00:51:38          main.go:  29:  ** start cardsales scrapping : fname(/Users/fit/go/src/cardsales/conf/cardsales.inc)
+2021/01/10 00:51:38          main.go:  30:  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2021/01/10 00:51:38        cls_db.go: 668:  [INFO] conf start (/Users/fit/go/src/cardsales/conf/cardsales.inc)
+2021/01/10 00:51:38   ino_encrypt.go:  64:  (1711) ipad  (7)
+2021/01/10 00:51:38        cls_db.go: 690:  [INFO] Dbip : ([db-1sf15.pub-cdb.ntruss.com])
+2021/01/10 00:51:38   ino_encrypt.go:  64:  (1711) ipad  (7)
+2021/01/10 00:51:38        cls_db.go: 703:  [INFO] Dbid : (darayo)
+2021/01/10 00:51:38   ino_encrypt.go:  64:  (1711) ipad  (7)
+2021/01/10 00:51:38   ino_encrypt.go:  64:  (1711) ipad  (7)
+2021/01/10 00:51:38        cls_db.go: 721:  [INFO] Dbnm : (darayodb)
+2021/01/10 00:51:38   ino_encrypt.go:  64:  (1711) ipad  (7)
+2021/01/10 00:51:38        cls_db.go: 730:  [INFO] Dbpt : (3306)
+2021/01/10 00:51:38   ino_encrypt.go:  64:  (1711) ipad  (7)
+2021/01/10 00:51:38        cls_db.go: 739:  [INFO] Dbbd : (mysql)
+2021/01/10 00:51:38   ino_encrypt.go:  64:  (1711) ipad  (7)
+2021/01/10 00:51:38   ino_encrypt.go:  64:  (1711) ipad  (7)
+2021/01/10 00:51:38        cls_db.go: 754:  [FAIL] TIMEOUT_DBMS not exist value, so set 10 seconds
+2021/01/10 00:51:38        cls_db.go: 759:  [INFO] DbTimeOut : 10
+2021/01/10 00:51:38        cls_db.go: 998:  [INFO] new db connection try db-1sf15.pub-cdb.ntruss.com 
+2021/01/10 00:51:38   ino_encrypt.go:  64:  (1711) ipad  (7)
+2021/01/10 00:51:38        cls_db.go: 825:  [INFO] check db connection start 
+2021/01/10 00:51:38   ino_encrypt.go:  64:  (1711) ipad  (7)
+2021/01/10 00:51:42          main.go: 116:  >> reCollects START .... [R0000000117:20210108] << 
+2021/01/10 00:51:42          main.go: 169:  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2021/01/10 00:51:42          main.go: 170:  >> collect START .... [3:R0000000117:20210108] << 
+2021/01/10 00:51:42          main.go: 180:  [INFO] 오늘=20210110, 조회일=20210108
+2021/01/10 00:51:42        cls_db.go:1069:  [INFO] query resp string : select a.BIZ_NUM, a.SVC_OPEN_DT, a.LN_FIRST_YN, a.LN_JOIN_TY, a.LN_ID, a.LN_PSW, a.LN_JOIN_STS_CD, IFNULL(b.BS_DT,'') as BS_DT, IFNULL(left(b.REG_DT,8),'') AS REG_DT, IFNULL(left(b.MOD_DT,8),'') AS MOD_DT, IFNULL(b.STS_CD,'') as STS_CD, IFNULL(b.ERR_CD,'') as ERRCD from cc_comp_inf a left join cc_sync_inf b on a.BIZ_NUM=b.BIZ_NUM and b.BS_DT=? where a.REST_ID=? and a.COMP_STS_CD=? and a.LN_JOIN_STS_CD=?;
+2021/01/10 00:51:42        cls_db.go:1070:  [INFO] params resp string : [20210108 R0000000117 1 1]
+2021/01/10 00:51:42          main.go: 204:  [INFO] 가맹점정보 (1건)([{1198619035 20200401 Y 1 youchan you123!@# 1 20210108 20210109 20210110 2 0006}]) 
+2021/01/10 00:51:42          main.go: 252:  [INFO][go-0] dateList ([20210102 20210103 20210104 20210105 20210106 20210107 20210108])
+2021/01/10 00:51:43          main.go: 265:  [INFO][go-0] login succes wait 100 ms(youchan) 
+2021/01/10 00:51:43          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/commonCode/merGrpCode) 
+2021/01/10 00:51:43          main.go:1198:  [INFO][go-0] login out=(&{302 Found %!s(int=302) HTTP/1.1 %!s(int=1) %!s(int=1) map[Cache-Control:[no-cache, no-store, max-age=0, must-revalidate] Connection:[Keep-Alive] Content-Language:[en-US] Content-Length:[0] Date:[Sat, 09 Jan 2021 15:57:42 GMT] Expires:[0] Keep-Alive:[timeout=30] Location:[https://www.cardsales.or.kr/signin] Pragma:[no-cache] Set-Cookie:[JSESSIONID=0000Ke6JMIYx2mZP_AYzzSlY6ni:155k9dlbc; Path=/; HttpOnly] Strict-Transport-Security:[max-age=31536000 ; includeSubDomains] X-Content-Type-Options:[nosniff] X-Powered-By:[Servlet/3.0] X-Ua-Compatible:[IE=EmulateIE7] X-Xss-Protection:[1; mode=block]] %!s(*http.cancelTimerBody=&{0x4097260 {} 0x430a6a0}) %!s(int64=0) [] %!s(bool=false) %!s(bool=false) map[] %!s(*http.Request=&{GET 0xc0000ca510 HTTP/1.1 1 1 map[Connection:[keep-alive] Cookie:[JSESSIONID=0000zlvzuhZRUvgndi71Ilxk7sT:msiv1was1] Host:[www.cardsales.or.kr] Referer:[https://www.cardsales.or.kr/signin]] <nil> <nil> 0 [] false www.cardsales.or.kr map[] map[] <nil> map[]   <nil> <nil> <nil> 0xc000444000}) %!s(*tls.ConnectionState=&{771 true false 156  true www.cardsales.or.kr [0xc000580b00 0xc000581080 0xc000581600 0xc000581b80] [] [] [] [39 15 81 129 169 242 181 110 219 144 138 47] 0x426b680})}) 
+2021/01/10 00:51:43          main.go:1217:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/commonCode/merGrpCode) 
+2021/01/10 00:51:44          main.go: 279:  [INFO][go-0] getGrpId ([{1129077259 유창순대삼계탕  }]) 
+2021/01/10 00:51:44          main.go: 335:  [INFO][go-0] 수집일=20210102
+2021/01/10 00:51:44          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/approval/dayListAjax?stdDate=20210102&merGrpId=1129077259&cardCo=&merNo=) 
+2021/01/10 00:51:45          main.go: 486:  [INFO][go-0] getApproval: resp approval sum (1198619035:7건)({{26 748500 26 748500 0 0} [{01 KB카드 1 52000 1 52000 0 0               0           0} {19 농협NH카드 9 267500 9 267500 0 0               0           0} {11 롯데카드 4 76000 4 76000 0 0               0           0} {04 비씨카드 6 156000 6 156000 0 0               0           0} {13 삼성카드 3 127000 3 127000 0 0               0           0} {03 신한카드 1 40000 1 40000 0 0               0           0} {12 현대카드 2 30000 2 30000 0 0               0           0}] }) 
+2021/01/10 00:51:45        cls_db.go:1069:  [INFO] query resp string : select TOT_CNT, TOT_AMT, APRV_CNT, APRV_AMT, CAN_CNT, CAN_AMT from cc_aprv_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:45        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210102]
+2021/01/10 00:51:45          main.go: 492:  [INFO][go-0] getApproval: db approval sum (&{26 748500 26 748500 0 0}) 
+2021/01/10 00:51:45          main.go: 503:  [INFO][go-0] getApproval: db approval sum amt (748500) = (748500) 
+2021/01/10 00:51:45          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/purchase/day?q.flag=&q.stdYear=&q.stdMonth=&q.pageType=&q.searchDateCode=PCA_DATE&selAmt=0&selCnt=0&oldAmt=&q.oldMerNo=&q.oldMerGrpId=&q.oldSearchDate=&q.oldCardCo=&q.merGrpId=1129077259&q.cardCo=&q.merNo=&q.searchDate=20210102&q.dataPerPage=20) 
+2021/01/10 00:51:46        cls_db.go:1069:  [INFO] query resp string : select PCA_CNT, PCA_AMT, MER_FEE, PNT_FEE, ETC_FEE, TOT_FEE, VAT_AMT, OUTP_EXPT_AMT from cc_pca_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:46        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210102]
+2021/01/10 00:51:46          main.go: 747:  [INFO][go-0] getPurchase: db purchase sum (&{25 613500 6883 0 0 6883 0 606617}) 
+2021/01/10 00:51:46          main.go: 758:  [INFO][go-0] getPurchase: db purchase sum same (&{25 613500 6883 0 0 6883 0 606617}) 
+2021/01/10 00:51:46          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/payment/termListAjax?q.startDate=20210102&q.endDate=20210102&q.merGrpId=1129077259&q.cardCo=&q.merNo=) 
+2021/01/10 00:51:46          main.go:1198:  [INFO][go-0] login out=(&{302 Found %!s(int=302) HTTP/1.1 %!s(int=1) %!s(int=1) map[Cache-Control:[no-cache, no-store, max-age=0, must-revalidate] Connection:[Keep-Alive] Content-Language:[en-US] Content-Length:[0] Date:[Sat, 09 Jan 2021 15:57:45 GMT] Expires:[0] Keep-Alive:[timeout=30] Location:[https://www.cardsales.or.kr/signin] Pragma:[no-cache] Set-Cookie:[JSESSIONID=0000-MYDG6sYVq4AgufWa_arVFK:155k9dlbc; Path=/; HttpOnly] Strict-Transport-Security:[max-age=31536000 ; includeSubDomains] X-Content-Type-Options:[nosniff] X-Powered-By:[Servlet/3.0] X-Ua-Compatible:[IE=EmulateIE7] X-Xss-Protection:[1; mode=block]] %!s(*http.cancelTimerBody=&{0x4097260 {} 0x430a6a0}) %!s(int64=0) [] %!s(bool=false) %!s(bool=false) map[] %!s(*http.Request=&{GET 0xc0006945a0 HTTP/1.1 1 1 map[Connection:[keep-alive] Cookie:[JSESSIONID=00000JC0WO4ot5meVuetlxl6MtP:msiv1was1] Host:[www.cardsales.or.kr] Referer:[https://www.cardsales.or.kr/page/purchase/day]] <nil> <nil> 0 [] false www.cardsales.or.kr map[] map[] <nil> map[]   <nil> <nil> <nil> 0xc0006ee180}) %!s(*tls.ConnectionState=&{771 true false 156  true www.cardsales.or.kr [0xc000633180 0xc000633700 0xc00066c000 0xc00066c580] [] [] [] [103 115 97 199 233 241 223 14 215 114 143 29] 0x426b680})}) 
+2021/01/10 00:51:46          main.go:1217:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/payment/termListAjax?q.startDate=20210102&q.endDate=20210102&q.merGrpId=1129077259&q.cardCo=&q.merNo=) 
+2021/01/10 00:51:47          main.go: 998:  [INFO][go-0] getPayment: resp payment sum (1198619035:0건)({[]}) 
+2021/01/10 00:51:47          main.go: 368:  [INFO][go-0] success => 20210102 
+2021/01/10 00:51:47        cls_db.go:1069:  [INFO] query resp string : select BIZ_NUM, BS_DT, SITE_CD, APRV_CNT, APRV_AMT, PCA_CNT, PCA_AMT, PAY_CNT, PAY_AMT, IFNULL(REG_DT,'') as REG_DT, IFNULL(MOD_DT,'') as MOD_DT, STS_CD, ERR_CD from cc_sync_inf where BIZ_NUM=? and BS_DT=? and SITE_CD=?;
+2021/01/10 00:51:47        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210102 1]
+2021/01/10 00:51:47        carddb.go: 170:  [INFO][go-0] syncInfo ({1198619035 20210102 1 26 748500 25 613500 0 0 20210103100002 20210110004738 2 0003}) 
+2021/01/10 00:51:47        cls_db.go:1094:  [INFO] query resp string : update cc_sync_inf set APRV_CNT=?, APRV_AMT=?, PCA_CNT=?, PCA_AMT=?, PAY_CNT=?, PAY_AMT=?, STS_CD=?, ERR_CD=?, MOD_DT=? where BIZ_NUM=? and BS_DT=? and SITE_CD=?
+2021/01/10 00:51:47        cls_db.go:1095:  [INFO] params resp string : [26 748500 25 613500 0 0 1 0000 20210110005147 1198619035 20210102 1]
+2021/01/10 00:51:47        cls_db.go:1120:  [INFO] 1 row affected 
+2021/01/10 00:51:47          main.go: 335:  [INFO][go-0] 수집일=20210103
+2021/01/10 00:51:47          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/approval/dayListAjax?stdDate=20210103&merGrpId=1129077259&cardCo=&merNo=) 
+2021/01/10 00:51:48          main.go: 486:  [INFO][go-0] getApproval: resp approval sum (1198619035:0건)({{0 0 0 0 0 0} [] }) 
+2021/01/10 00:51:48        cls_db.go:1069:  [INFO] query resp string : select TOT_CNT, TOT_AMT, APRV_CNT, APRV_AMT, CAN_CNT, CAN_AMT from cc_aprv_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:48        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210103]
+2021/01/10 00:51:48          main.go: 492:  [INFO][go-0] getApproval: db approval sum (&{     }) 
+2021/01/10 00:51:48          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/purchase/day?q.flag=&q.stdYear=&q.stdMonth=&q.pageType=&q.searchDateCode=PCA_DATE&selAmt=0&selCnt=0&oldAmt=&q.oldMerNo=&q.oldMerGrpId=&q.oldSearchDate=&q.oldCardCo=&q.merGrpId=1129077259&q.cardCo=&q.merNo=&q.searchDate=20210103&q.dataPerPage=20) 
+2021/01/10 00:51:48          main.go:1198:  [INFO][go-0] login out=(&{302 Found %!s(int=302) HTTP/1.1 %!s(int=1) %!s(int=1) map[Cache-Control:[no-cache, no-store, max-age=0, must-revalidate] Connection:[Keep-Alive] Content-Language:[en-US] Content-Length:[0] Date:[Sat, 09 Jan 2021 15:57:47 GMT] Expires:[0] Keep-Alive:[timeout=30] Location:[https://www.cardsales.or.kr/signin] Pragma:[no-cache] Set-Cookie:[JSESSIONID=000011OCT8Zxn8IRdeQOsQIUBpx:155k9dlbc; Path=/; HttpOnly] Strict-Transport-Security:[max-age=31536000 ; includeSubDomains] X-Content-Type-Options:[nosniff] X-Powered-By:[Servlet/3.0] X-Ua-Compatible:[IE=EmulateIE7] X-Xss-Protection:[1; mode=block]] %!s(*http.cancelTimerBody=&{0x4097260 {} 0x430a6a0}) %!s(int64=0) [] %!s(bool=false) %!s(bool=false) map[] %!s(*http.Request=&{GET 0xc000694bd0 HTTP/1.1 1 1 map[Connection:[keep-alive] Cookie:[JSESSIONID=00000JC0WO4ot5meVuetlxl6MtP:msiv1was1] Host:[www.cardsales.or.kr] Referer:[https://www.cardsales.or.kr/page/purchase/day]] <nil> <nil> 0 [] false www.cardsales.or.kr map[] map[] <nil> map[]   <nil> <nil> <nil> 0xc0006eea20}) %!s(*tls.ConnectionState=&{771 true false 156  true www.cardsales.or.kr [0xc000590000 0xc000590580 0xc000590b00 0xc000591080] [] [] [] [237 209 33 127 133 251 74 233 177 107 239 83] 0x426b680})}) 
+2021/01/10 00:51:48          main.go:1217:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/purchase/day?q.flag=&q.stdYear=&q.stdMonth=&q.pageType=&q.searchDateCode=PCA_DATE&selAmt=0&selCnt=0&oldAmt=&q.oldMerNo=&q.oldMerGrpId=&q.oldSearchDate=&q.oldCardCo=&q.merGrpId=1129077259&q.cardCo=&q.merNo=&q.searchDate=20210103&q.dataPerPage=20) 
+2021/01/10 00:51:50        cls_db.go:1069:  [INFO] query resp string : select PCA_CNT, PCA_AMT, MER_FEE, PNT_FEE, ETC_FEE, TOT_FEE, VAT_AMT, OUTP_EXPT_AMT from cc_pca_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:50        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210103]
+2021/01/10 00:51:50          main.go: 747:  [INFO][go-0] getPurchase: db purchase sum (&{25 696500 8514 0 0 8514 0 687986}) 
+2021/01/10 00:51:50          main.go: 758:  [INFO][go-0] getPurchase: db purchase sum same (&{25 696500 8514 0 0 8514 0 687986}) 
+2021/01/10 00:51:50          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/payment/termListAjax?q.startDate=20210103&q.endDate=20210103&q.merGrpId=1129077259&q.cardCo=&q.merNo=) 
+2021/01/10 00:51:50          main.go:1198:  [INFO][go-0] login out=(&{302 Found %!s(int=302) HTTP/1.1 %!s(int=1) %!s(int=1) map[Cache-Control:[no-cache, no-store, max-age=0, must-revalidate] Connection:[Keep-Alive] Content-Language:[en-US] Content-Length:[0] Date:[Sat, 09 Jan 2021 15:57:49 GMT] Expires:[0] Keep-Alive:[timeout=30] Location:[https://www.cardsales.or.kr/signin] Pragma:[no-cache] Set-Cookie:[JSESSIONID=0000wCSd5iaj7rvi5eLJTRt5lZE:155k9dlbc; Path=/; HttpOnly] Strict-Transport-Security:[max-age=31536000 ; includeSubDomains] X-Content-Type-Options:[nosniff] X-Powered-By:[Servlet/3.0] X-Ua-Compatible:[IE=EmulateIE7] X-Xss-Protection:[1; mode=block]] %!s(*http.cancelTimerBody=&{0x4097260 {} 0x430a6a0}) %!s(int64=0) [] %!s(bool=false) %!s(bool=false) map[] %!s(*http.Request=&{GET 0xc0000ca1b0 HTTP/1.1 1 1 map[Connection:[keep-alive] Cookie:[JSESSIONID=0000UQRWOlffMvgC3q4gj5YXsy6:msiv1was1] Host:[www.cardsales.or.kr] Referer:[https://www.cardsales.or.kr/page/purchase/day]] <nil> <nil> 0 [] false www.cardsales.or.kr map[] map[] <nil> map[]   <nil> <nil> <nil> 0xc00072e0c0}) %!s(*tls.ConnectionState=&{771 true false 156  true www.cardsales.or.kr [0xc000591600 0xc000592100 0xc000592680 0xc000592c00] [] [] [] [93 210 21 83 159 63 145 110 127 53 252 184] 0x426b680})}) 
+2021/01/10 00:51:50          main.go:1217:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/payment/termListAjax?q.startDate=20210103&q.endDate=20210103&q.merGrpId=1129077259&q.cardCo=&q.merNo=) 
+2021/01/10 00:51:51          main.go: 998:  [INFO][go-0] getPayment: resp payment sum (1198619035:0건)({[]}) 
+2021/01/10 00:51:51          main.go: 368:  [INFO][go-0] success => 20210103 
+2021/01/10 00:51:51        cls_db.go:1069:  [INFO] query resp string : select BIZ_NUM, BS_DT, SITE_CD, APRV_CNT, APRV_AMT, PCA_CNT, PCA_AMT, PAY_CNT, PAY_AMT, IFNULL(REG_DT,'') as REG_DT, IFNULL(MOD_DT,'') as MOD_DT, STS_CD, ERR_CD from cc_sync_inf where BIZ_NUM=? and BS_DT=? and SITE_CD=?;
+2021/01/10 00:51:51        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210103 1]
+2021/01/10 00:51:51        carddb.go: 170:  [INFO][go-0] syncInfo ({1198619035 20210103 1 0 0 25 696500 0 0 20210104100002 20210109205733 1 0000}) 
+2021/01/10 00:51:51        cls_db.go:1094:  [INFO] query resp string : update cc_sync_inf set APRV_CNT=?, APRV_AMT=?, PCA_CNT=?, PCA_AMT=?, PAY_CNT=?, PAY_AMT=?, STS_CD=?, ERR_CD=?, MOD_DT=? where BIZ_NUM=? and BS_DT=? and SITE_CD=?
+2021/01/10 00:51:51        cls_db.go:1095:  [INFO] params resp string : [0 0 25 696500 0 0 1 0000 20210110005151 1198619035 20210103 1]
+2021/01/10 00:51:51        cls_db.go:1120:  [INFO] 1 row affected 
+2021/01/10 00:51:51          main.go: 335:  [INFO][go-0] 수집일=20210104
+2021/01/10 00:51:51          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/approval/dayListAjax?stdDate=20210104&merGrpId=1129077259&cardCo=&merNo=) 
+2021/01/10 00:51:52          main.go: 486:  [INFO][go-0] getApproval: resp approval sum (1198619035:8건)({{34 751000 34 751000 0 0} [{01 KB카드 7 134000 7 134000 0 0               0           0} {19 농협NH카드 9 226500 9 226500 0 0               0           0} {11 롯데카드 1 20000 1 20000 0 0               0           0} {04 비씨카드 9 196000 9 196000 0 0               0           0} {13 삼성카드 2 67000 2 67000 0 0               0           0} {03 신한카드 1 25500 1 25500 0 0               0           0} {21 하나카드 2 34000 2 34000 0 0               0           0} {12 현대카드 3 48000 3 48000 0 0               0           0}] }) 
+2021/01/10 00:51:52        cls_db.go:1069:  [INFO] query resp string : select TOT_CNT, TOT_AMT, APRV_CNT, APRV_AMT, CAN_CNT, CAN_AMT from cc_aprv_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:52        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210104]
+2021/01/10 00:51:52          main.go: 492:  [INFO][go-0] getApproval: db approval sum (&{34 751000 34 751000 0 0}) 
+2021/01/10 00:51:52          main.go: 503:  [INFO][go-0] getApproval: db approval sum amt (751000) = (751000) 
+2021/01/10 00:51:52          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/purchase/day?q.flag=&q.stdYear=&q.stdMonth=&q.pageType=&q.searchDateCode=PCA_DATE&selAmt=0&selCnt=0&oldAmt=&q.oldMerNo=&q.oldMerGrpId=&q.oldSearchDate=&q.oldCardCo=&q.merGrpId=1129077259&q.cardCo=&q.merNo=&q.searchDate=20210104&q.dataPerPage=20) 
+2021/01/10 00:51:52        cls_db.go:1069:  [INFO] query resp string : select PCA_CNT, PCA_AMT, MER_FEE, PNT_FEE, ETC_FEE, TOT_FEE, VAT_AMT, OUTP_EXPT_AMT from cc_pca_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:52        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210104]
+2021/01/10 00:51:52          main.go: 747:  [INFO][go-0] getPurchase: db purchase sum (&{11 221000 2519 0 0 2519 0 218481}) 
+2021/01/10 00:51:52          main.go: 758:  [INFO][go-0] getPurchase: db purchase sum same (&{11 221000 2519 0 0 2519 0 218481}) 
+2021/01/10 00:51:52          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/payment/termListAjax?q.startDate=20210104&q.endDate=20210104&q.merGrpId=1129077259&q.cardCo=&q.merNo=) 
+2021/01/10 00:51:53          main.go: 998:  [INFO][go-0] getPayment: resp payment sum (1198619035:1건)({[{20210104 29 729500 721247     0}]}) 
+2021/01/10 00:51:53        cls_db.go:1069:  [INFO] query resp string : select PAY_DT, PCA_CNT, PCA_AMT, REAL_PAY_AMT from cc_pay_lst where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:53        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210104]
+2021/01/10 00:51:53          main.go:1034:  [INFO][go-0] getPayment: db payment sum (&{20210104 29 729500 721247     0}) 
+2021/01/10 00:51:53          main.go:1044:  [INFO][go-0] getPayment: db Payment sum same (721247) 
+2021/01/10 00:51:53          main.go: 368:  [INFO][go-0] success => 20210104 
+2021/01/10 00:51:53        cls_db.go:1069:  [INFO] query resp string : select BIZ_NUM, BS_DT, SITE_CD, APRV_CNT, APRV_AMT, PCA_CNT, PCA_AMT, PAY_CNT, PAY_AMT, IFNULL(REG_DT,'') as REG_DT, IFNULL(MOD_DT,'') as MOD_DT, STS_CD, ERR_CD from cc_sync_inf where BIZ_NUM=? and BS_DT=? and SITE_CD=?;
+2021/01/10 00:51:53        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210104 1]
+2021/01/10 00:51:53        carddb.go: 170:  [INFO][go-0] syncInfo ({1198619035 20210104 1 0 0 0 0 0 0 20210105100038 20210109205734 2 0004}) 
+2021/01/10 00:51:53        cls_db.go:1094:  [INFO] query resp string : update cc_sync_inf set APRV_CNT=?, APRV_AMT=?, PCA_CNT=?, PCA_AMT=?, PAY_CNT=?, PAY_AMT=?, STS_CD=?, ERR_CD=?, MOD_DT=? where BIZ_NUM=? and BS_DT=? and SITE_CD=?
+2021/01/10 00:51:53        cls_db.go:1095:  [INFO] params resp string : [34 751000 11 221000 29 721247 1 0000 20210110005153 1198619035 20210104 1]
+2021/01/10 00:51:53        cls_db.go:1120:  [INFO] 1 row affected 
+2021/01/10 00:51:53          main.go: 335:  [INFO][go-0] 수집일=20210105
+2021/01/10 00:51:53          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/approval/dayListAjax?stdDate=20210105&merGrpId=1129077259&cardCo=&merNo=) 
+2021/01/10 00:51:54          main.go: 486:  [INFO][go-0] getApproval: resp approval sum (1198619035:6건)({{34 999500 34 999500 0 0} [{01 KB카드 4 97000 4 97000 0 0               0           0} {19 농협NH카드 12 323000 12 323000 0 0               0           0} {04 비씨카드 9 236000 9 236000 0 0               0           0} {13 삼성카드 2 56000 2 56000 0 0               0           0} {03 신한카드 2 69500 2 69500 0 0               0           0} {12 현대카드 5 218000 5 218000 0 0               0           0}] }) 
+2021/01/10 00:51:54        cls_db.go:1069:  [INFO] query resp string : select TOT_CNT, TOT_AMT, APRV_CNT, APRV_AMT, CAN_CNT, CAN_AMT from cc_aprv_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:54        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210105]
+2021/01/10 00:51:54          main.go: 492:  [INFO][go-0] getApproval: db approval sum (&{34 999500 34 999500 0 0}) 
+2021/01/10 00:51:54          main.go: 503:  [INFO][go-0] getApproval: db approval sum amt (999500) = (999500) 
+2021/01/10 00:51:54          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/purchase/day?q.flag=&q.stdYear=&q.stdMonth=&q.pageType=&q.searchDateCode=PCA_DATE&selAmt=0&selCnt=0&oldAmt=&q.oldMerNo=&q.oldMerGrpId=&q.oldSearchDate=&q.oldCardCo=&q.merGrpId=1129077259&q.cardCo=&q.merNo=&q.searchDate=20210105&q.dataPerPage=20) 
+2021/01/10 00:51:54        cls_db.go:1069:  [INFO] query resp string : select PCA_CNT, PCA_AMT, MER_FEE, PNT_FEE, ETC_FEE, TOT_FEE, VAT_AMT, OUTP_EXPT_AMT from cc_pca_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:54        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210105]
+2021/01/10 00:51:54          main.go: 747:  [INFO][go-0] getPurchase: db purchase sum (&{34 751000 8792 0 0 8792 0 742208}) 
+2021/01/10 00:51:54          main.go: 758:  [INFO][go-0] getPurchase: db purchase sum same (&{34 751000 8792 0 0 8792 0 742208}) 
+2021/01/10 00:51:54          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/payment/termListAjax?q.startDate=20210105&q.endDate=20210105&q.merGrpId=1129077259&q.cardCo=&q.merNo=) 
+2021/01/10 00:51:55          main.go: 998:  [INFO][go-0] getPayment: resp payment sum (1198619035:1건)({[{20210105 76 1877500 1855899     0}]}) 
+2021/01/10 00:51:55        cls_db.go:1069:  [INFO] query resp string : select PAY_DT, PCA_CNT, PCA_AMT, REAL_PAY_AMT from cc_pay_lst where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:55        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210105]
+2021/01/10 00:51:55          main.go:1034:  [INFO][go-0] getPayment: db payment sum (&{20210105 76 1877500 1855899     0}) 
+2021/01/10 00:51:55          main.go:1044:  [INFO][go-0] getPayment: db Payment sum same (1855899) 
+2021/01/10 00:51:55          main.go: 368:  [INFO][go-0] success => 20210105 
+2021/01/10 00:51:55        cls_db.go:1069:  [INFO] query resp string : select BIZ_NUM, BS_DT, SITE_CD, APRV_CNT, APRV_AMT, PCA_CNT, PCA_AMT, PAY_CNT, PAY_AMT, IFNULL(REG_DT,'') as REG_DT, IFNULL(MOD_DT,'') as MOD_DT, STS_CD, ERR_CD from cc_sync_inf where BIZ_NUM=? and BS_DT=? and SITE_CD=?;
+2021/01/10 00:51:55        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210105 1]
+2021/01/10 00:51:55        carddb.go: 170:  [INFO][go-0] syncInfo ({1198619035 20210105 1 34 999500 34 751000 76 1855899 20210106100100 20210109204034 1 0000}) 
+2021/01/10 00:51:55        cls_db.go:1094:  [INFO] query resp string : update cc_sync_inf set APRV_CNT=?, APRV_AMT=?, PCA_CNT=?, PCA_AMT=?, PAY_CNT=?, PAY_AMT=?, STS_CD=?, ERR_CD=?, MOD_DT=? where BIZ_NUM=? and BS_DT=? and SITE_CD=?
+2021/01/10 00:51:55        cls_db.go:1095:  [INFO] params resp string : [34 999500 34 751000 76 1855899 1 0000 20210110005155 1198619035 20210105 1]
+2021/01/10 00:51:55        cls_db.go:1120:  [INFO] 1 row affected 
+2021/01/10 00:51:55          main.go: 335:  [INFO][go-0] 수집일=20210106
+2021/01/10 00:51:55          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/approval/dayListAjax?stdDate=20210106&merGrpId=1129077259&cardCo=&merNo=) 
+2021/01/10 00:51:55          main.go: 486:  [INFO][go-0] getApproval: resp approval sum (1198619035:7건)({{41 1089000 41 1089000 0 0} [{01 KB카드 3 96000 3 96000 0 0               0           0} {19 농협NH카드 19 623000 19 623000 0 0               0           0} {11 롯데카드 1 24000 1 24000 0 0               0           0} {04 비씨카드 9 122000 9 122000 0 0               0           0} {13 삼성카드 2 18000 2 18000 0 0               0           0} {03 신한카드 3 58000 3 58000 0 0               0           0} {12 현대카드 4 148000 4 148000 0 0               0           0}] }) 
+2021/01/10 00:51:55        cls_db.go:1069:  [INFO] query resp string : select TOT_CNT, TOT_AMT, APRV_CNT, APRV_AMT, CAN_CNT, CAN_AMT from cc_aprv_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:55        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210106]
+2021/01/10 00:51:55          main.go: 492:  [INFO][go-0] getApproval: db approval sum (&{41 1089000 41 1089000 0 0}) 
+2021/01/10 00:51:55          main.go: 503:  [INFO][go-0] getApproval: db approval sum amt (1089000) = (1089000) 
+2021/01/10 00:51:55          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/purchase/day?q.flag=&q.stdYear=&q.stdMonth=&q.pageType=&q.searchDateCode=PCA_DATE&selAmt=0&selCnt=0&oldAmt=&q.oldMerNo=&q.oldMerGrpId=&q.oldSearchDate=&q.oldCardCo=&q.merGrpId=1129077259&q.cardCo=&q.merNo=&q.searchDate=20210106&q.dataPerPage=20) 
+2021/01/10 00:51:56        cls_db.go:1069:  [INFO] query resp string : select PCA_CNT, PCA_AMT, MER_FEE, PNT_FEE, ETC_FEE, TOT_FEE, VAT_AMT, OUTP_EXPT_AMT from cc_pca_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:56        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210106]
+2021/01/10 00:51:56          main.go: 747:  [INFO][go-0] getPurchase: db purchase sum (&{34 999500 11742 0 0 11742 0 987758}) 
+2021/01/10 00:51:56          main.go: 758:  [INFO][go-0] getPurchase: db purchase sum same (&{34 999500 11742 0 0 11742 0 987758}) 
+2021/01/10 00:51:56          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/payment/termListAjax?q.startDate=20210106&q.endDate=20210106&q.merGrpId=1129077259&q.cardCo=&q.merNo=) 
+2021/01/10 00:51:57          main.go: 998:  [INFO][go-0] getPayment: resp payment sum (1198619035:1건)({[{20210106 34 751000 742208     0}]}) 
+2021/01/10 00:51:57        cls_db.go:1069:  [INFO] query resp string : select PAY_DT, PCA_CNT, PCA_AMT, REAL_PAY_AMT from cc_pay_lst where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:57        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210106]
+2021/01/10 00:51:57          main.go:1034:  [INFO][go-0] getPayment: db payment sum (&{20210106 34 751000 742208     0}) 
+2021/01/10 00:51:57          main.go:1044:  [INFO][go-0] getPayment: db Payment sum same (742208) 
+2021/01/10 00:51:57          main.go: 368:  [INFO][go-0] success => 20210106 
+2021/01/10 00:51:57        cls_db.go:1069:  [INFO] query resp string : select BIZ_NUM, BS_DT, SITE_CD, APRV_CNT, APRV_AMT, PCA_CNT, PCA_AMT, PAY_CNT, PAY_AMT, IFNULL(REG_DT,'') as REG_DT, IFNULL(MOD_DT,'') as MOD_DT, STS_CD, ERR_CD from cc_sync_inf where BIZ_NUM=? and BS_DT=? and SITE_CD=?;
+2021/01/10 00:51:57        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210106 1]
+2021/01/10 00:51:57        carddb.go: 170:  [INFO][go-0] syncInfo ({1198619035 20210106 1 41 1089000 34 999500 0 0 20210107100001 20210109204041 2 0004}) 
+2021/01/10 00:51:57        cls_db.go:1094:  [INFO] query resp string : update cc_sync_inf set APRV_CNT=?, APRV_AMT=?, PCA_CNT=?, PCA_AMT=?, PAY_CNT=?, PAY_AMT=?, STS_CD=?, ERR_CD=?, MOD_DT=? where BIZ_NUM=? and BS_DT=? and SITE_CD=?
+2021/01/10 00:51:57        cls_db.go:1095:  [INFO] params resp string : [41 1089000 34 999500 34 742208 1 0000 20210110005157 1198619035 20210106 1]
+2021/01/10 00:51:57        cls_db.go:1120:  [INFO] 1 row affected 
+2021/01/10 00:51:57          main.go: 335:  [INFO][go-0] 수집일=20210107
+2021/01/10 00:51:57          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/approval/dayListAjax?stdDate=20210107&merGrpId=1129077259&cardCo=&merNo=) 
+2021/01/10 00:51:57          main.go: 486:  [INFO][go-0] getApproval: resp approval sum (1198619035:7건)({{27 612500 27 612500 0 0} [{01 KB카드 5 46000 5 46000 0 0               0           0} {19 농협NH카드 7 220500 7 220500 0 0               0           0} {04 비씨카드 3 64000 3 64000 0 0               0           0} {13 삼성카드 2 30000 2 30000 0 0               0           0} {03 신한카드 3 96000 3 96000 0 0               0           0} {21 하나카드 2 26000 2 26000 0 0               0           0} {12 현대카드 5 130000 5 130000 0 0               0           0}] }) 
+2021/01/10 00:51:57        cls_db.go:1069:  [INFO] query resp string : select TOT_CNT, TOT_AMT, APRV_CNT, APRV_AMT, CAN_CNT, CAN_AMT from cc_aprv_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:57        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210107]
+2021/01/10 00:51:57          main.go: 492:  [INFO][go-0] getApproval: db approval sum (&{27 612500 27 612500 0 0}) 
+2021/01/10 00:51:57          main.go: 503:  [INFO][go-0] getApproval: db approval sum amt (612500) = (612500) 
+2021/01/10 00:51:57          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/purchase/day?q.flag=&q.stdYear=&q.stdMonth=&q.pageType=&q.searchDateCode=PCA_DATE&selAmt=0&selCnt=0&oldAmt=&q.oldMerNo=&q.oldMerGrpId=&q.oldSearchDate=&q.oldCardCo=&q.merGrpId=1129077259&q.cardCo=&q.merNo=&q.searchDate=20210107&q.dataPerPage=20) 
+2021/01/10 00:51:58        cls_db.go:1069:  [INFO] query resp string : select PCA_CNT, PCA_AMT, MER_FEE, PNT_FEE, ETC_FEE, TOT_FEE, VAT_AMT, OUTP_EXPT_AMT from cc_pca_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:58        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210107]
+2021/01/10 00:51:58          main.go: 747:  [INFO][go-0] getPurchase: db purchase sum (&{41 1089000 12412 0 0 12412 0 1076588}) 
+2021/01/10 00:51:58          main.go: 758:  [INFO][go-0] getPurchase: db purchase sum same (&{41 1089000 12412 0 0 12412 0 1076588}) 
+2021/01/10 00:51:58          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/payment/termListAjax?q.startDate=20210107&q.endDate=20210107&q.merGrpId=1129077259&q.cardCo=&q.merNo=) 
+2021/01/10 00:51:58          main.go: 998:  [INFO][go-0] getPayment: resp payment sum (1198619035:1건)({[{20210107 34 999500 987758     0}]}) 
+2021/01/10 00:51:58        cls_db.go:1069:  [INFO] query resp string : select PAY_DT, PCA_CNT, PCA_AMT, REAL_PAY_AMT from cc_pay_lst where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:58        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210107]
+2021/01/10 00:51:58          main.go:1034:  [INFO][go-0] getPayment: db payment sum (&{20210107 34 999500 987758     0}) 
+2021/01/10 00:51:58          main.go:1044:  [INFO][go-0] getPayment: db Payment sum same (987758) 
+2021/01/10 00:51:58          main.go: 368:  [INFO][go-0] success => 20210107 
+2021/01/10 00:51:58        cls_db.go:1069:  [INFO] query resp string : select BIZ_NUM, BS_DT, SITE_CD, APRV_CNT, APRV_AMT, PCA_CNT, PCA_AMT, PAY_CNT, PAY_AMT, IFNULL(REG_DT,'') as REG_DT, IFNULL(MOD_DT,'') as MOD_DT, STS_CD, ERR_CD from cc_sync_inf where BIZ_NUM=? and BS_DT=? and SITE_CD=?;
+2021/01/10 00:51:58        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210107 1]
+2021/01/10 00:51:58        carddb.go: 170:  [INFO][go-0] syncInfo ({1198619035 20210107 1 27 612500 41 1089000 34 987758 20210108100003  1 0000}) 
+2021/01/10 00:51:58        cls_db.go:1094:  [INFO] query resp string : update cc_sync_inf set APRV_CNT=?, APRV_AMT=?, PCA_CNT=?, PCA_AMT=?, PAY_CNT=?, PAY_AMT=?, STS_CD=?, ERR_CD=?, MOD_DT=? where BIZ_NUM=? and BS_DT=? and SITE_CD=?
+2021/01/10 00:51:58        cls_db.go:1095:  [INFO] params resp string : [27 612500 41 1089000 34 987758 1 0000 20210110005158 1198619035 20210107 1]
+2021/01/10 00:51:58        cls_db.go:1120:  [INFO] 1 row affected 
+2021/01/10 00:51:58          main.go: 335:  [INFO][go-0] 수집일=20210108
+2021/01/10 00:51:58          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/approval/dayListAjax?stdDate=20210108&merGrpId=1129077259&cardCo=&merNo=) 
+2021/01/10 00:51:59          main.go: 486:  [INFO][go-0] getApproval: resp approval sum (1198619035:7건)({{34 718000 34 718000 0 0} [{01 KB카드 6 144000 6 144000 0 0               0           0} {19 농협NH카드 6 78000 6 78000 0 0               0           0} {04 비씨카드 10 192500 10 192500 0 0               0           0} {13 삼성카드 4 117500 4 117500 0 0               0           0} {03 신한카드 2 48000 2 48000 0 0               0           0} {21 하나카드 1 30000 1 30000 0 0               0           0} {12 현대카드 5 108000 5 108000 0 0               0           0}] }) 
+2021/01/10 00:51:59        cls_db.go:1069:  [INFO] query resp string : select TOT_CNT, TOT_AMT, APRV_CNT, APRV_AMT, CAN_CNT, CAN_AMT from cc_aprv_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:51:59        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210108]
+2021/01/10 00:51:59          main.go: 492:  [INFO][go-0] getApproval: db approval sum (&{34 718000 34 718000 0 0}) 
+2021/01/10 00:51:59          main.go: 503:  [INFO][go-0] getApproval: db approval sum amt (718000) = (718000) 
+2021/01/10 00:51:59          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/purchase/day?q.flag=&q.stdYear=&q.stdMonth=&q.pageType=&q.searchDateCode=PCA_DATE&selAmt=0&selCnt=0&oldAmt=&q.oldMerNo=&q.oldMerGrpId=&q.oldSearchDate=&q.oldCardCo=&q.merGrpId=1129077259&q.cardCo=&q.merNo=&q.searchDate=20210108&q.dataPerPage=20) 
+2021/01/10 00:51:59          main.go:1198:  [INFO][go-0] login out=(&{302 Found %!s(int=302) HTTP/1.1 %!s(int=1) %!s(int=1) map[Cache-Control:[no-cache, no-store, max-age=0, must-revalidate] Connection:[Keep-Alive] Content-Language:[en-US] Content-Length:[0] Date:[Sat, 09 Jan 2021 15:57:58 GMT] Expires:[0] Keep-Alive:[timeout=30] Location:[https://www.cardsales.or.kr/signin] Pragma:[no-cache] Set-Cookie:[JSESSIONID=0000adgqxEfIZAmn5J7aZ7RujNS:155k9dlbc; Path=/; HttpOnly] Strict-Transport-Security:[max-age=31536000 ; includeSubDomains] X-Content-Type-Options:[nosniff] X-Powered-By:[Servlet/3.0] X-Ua-Compatible:[IE=EmulateIE7] X-Xss-Protection:[1; mode=block]] %!s(*http.cancelTimerBody=&{0x4097260 {} 0x430a6a0}) %!s(int64=0) [] %!s(bool=false) %!s(bool=false) map[] %!s(*http.Request=&{GET 0xc000132c60 HTTP/1.1 1 1 map[Connection:[keep-alive] Cookie:[JSESSIONID=0000UQRWOlffMvgC3q4gj5YXsy6:msiv1was1] Host:[www.cardsales.or.kr] Referer:[https://www.cardsales.or.kr/page/purchase/day]] <nil> <nil> 0 [] false www.cardsales.or.kr map[] map[] <nil> map[]   <nil> <nil> <nil> 0xc00085d320}) %!s(*tls.ConnectionState=&{771 true false 156  true www.cardsales.or.kr [0xc000598580 0xc000598b00 0xc0004be580 0xc0004c0100] [] [] [] [239 152 173 157 225 212 97 235 224 200 111 172] 0x426b680})}) 
+2021/01/10 00:51:59          main.go:1217:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/purchase/day?q.flag=&q.stdYear=&q.stdMonth=&q.pageType=&q.searchDateCode=PCA_DATE&selAmt=0&selCnt=0&oldAmt=&q.oldMerNo=&q.oldMerGrpId=&q.oldSearchDate=&q.oldCardCo=&q.merGrpId=1129077259&q.cardCo=&q.merNo=&q.searchDate=20210108&q.dataPerPage=20) 
+2021/01/10 00:52:01        cls_db.go:1069:  [INFO] query resp string : select PCA_CNT, PCA_AMT, MER_FEE, PNT_FEE, ETC_FEE, TOT_FEE, VAT_AMT, OUTP_EXPT_AMT from cc_pca_sum where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:52:01        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210108]
+2021/01/10 00:52:01          main.go: 747:  [INFO][go-0] getPurchase: db purchase sum (&{27 612500 7542 0 0 7542 0 604958}) 
+2021/01/10 00:52:01          main.go: 758:  [INFO][go-0] getPurchase: db purchase sum same (&{27 612500 7542 0 0 7542 0 604958}) 
+2021/01/10 00:52:01          main.go:1165:  [INFO][go-0] http NewRequest (https://www.cardsales.or.kr/page/api/payment/termListAjax?q.startDate=20210108&q.endDate=20210108&q.merGrpId=1129077259&q.cardCo=&q.merNo=) 
+2021/01/10 00:52:01          main.go: 998:  [INFO][go-0] getPayment: resp payment sum (1198619035:1건)({[{20210108 41 1089000 1076588     0}]}) 
+2021/01/10 00:52:01        cls_db.go:1069:  [INFO] query resp string : select PAY_DT, PCA_CNT, PCA_AMT, REAL_PAY_AMT from cc_pay_lst where BIZ_NUM=? and BS_DT=?;
+2021/01/10 00:52:01        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210108]
+2021/01/10 00:52:01          main.go:1034:  [INFO][go-0] getPayment: db payment sum (&{20210108 41 1089000 1076588     0}) 
+2021/01/10 00:52:01          main.go:1044:  [INFO][go-0] getPayment: db Payment sum same (1076588) 
+2021/01/10 00:52:01          main.go: 368:  [INFO][go-0] success => 20210108 
+2021/01/10 00:52:01        cls_db.go:1069:  [INFO] query resp string : select BIZ_NUM, BS_DT, SITE_CD, APRV_CNT, APRV_AMT, PCA_CNT, PCA_AMT, PAY_CNT, PAY_AMT, IFNULL(REG_DT,'') as REG_DT, IFNULL(MOD_DT,'') as MOD_DT, STS_CD, ERR_CD from cc_sync_inf where BIZ_NUM=? and BS_DT=? and SITE_CD=?;
+2021/01/10 00:52:01        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210108 1]
+2021/01/10 00:52:01        carddb.go: 170:  [INFO][go-0] syncInfo ({1198619035 20210108 1 0 0 0 0 0 0 20210109100001 20210110001951 2 0006}) 
+2021/01/10 00:52:01        cls_db.go:1094:  [INFO] query resp string : update cc_sync_inf set APRV_CNT=?, APRV_AMT=?, PCA_CNT=?, PCA_AMT=?, PAY_CNT=?, PAY_AMT=?, STS_CD=?, ERR_CD=?, MOD_DT=? where BIZ_NUM=? and BS_DT=? and SITE_CD=?
+2021/01/10 00:52:01        cls_db.go:1095:  [INFO] params resp string : [34 718000 27 612500 41 1076588 1 0000 20210110005201 1198619035 20210108 1]
+2021/01/10 00:52:01        cls_db.go:1120:  [INFO] 1 row affected 
+2021/01/10 00:52:01        cls_db.go:1069:  [INFO] query resp string : SELECT a.STS_CD, IFNULL(b.PUSH_DT, "") FROM cc_sync_inf a, cc_comp_inf b WHERE a.BIZ_NUM=? AND a.BS_DT =? AND a.BIZ_NUM = b.BIZ_NUM
+2021/01/10 00:52:01        cls_db.go:1070:  [INFO] params resp string : [1198619035 20210108]
+2021/01/10 00:52:01        cls_db.go: 611:  [INFO] query resp string : update cc_comp_inf set PUSH_DT = '20210108' where biz_num = '1198619035'
+2021/01/10 00:52:01        cls_db.go: 612:  [INFO] params resp string : []
+2021/01/10 00:52:01      cls_http.go:  49:  [INFO] HTTP send address (http://api.darayo.com:80/DaRaYo/api/common/commonPush.json?userId=1198619035&userTy=5&msgCode=5002)
+2021/01/10 00:52:02      cls_http.go:  49:  [INFO] HTTP send address (http://49.50.172.227:7180/CashCombine/v1/csv/makeKftcData.json?bizNum=1198619035&bsDt=20210108)
+2021/01/10 00:52:02        cls_db.go:1069:  [INFO] query resp string : select COUNT(a.BIZ_NUM), 0 from cc_sync_inf a, cc_comp_inf b where a.BS_DT=? and a.ERR_CD=? and a.BIZ_NUM = b.BIZ_NUM and b.REST_ID=?
+2021/01/10 00:52:02        cls_db.go:1070:  [INFO] params resp string : [20210108 0000 R0000000117]
+2021/01/10 00:52:02          main.go: 326:  >> collect END.... [3:R0000000117:20210108][1/1] << 
+2021/01/10 00:52:02          main.go: 327:  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2021/01/10 00:52:02          main.go: 128:  >> reCollects END .... [R0000000117:20210108] << 
