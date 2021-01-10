@@ -244,7 +244,7 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 				}
 			}
 
-			// 과거 일부터 수집 시작
+			// 과거 일부터 수집 시작, 따라서 오늘자 수집 데이터가 정상이면 7일치를 다 정상으로 조회했음을 의미
 			for i := searchDay - 1; i >= 0; i-- {
 				tmpsDt := timeBsDt.AddDate(0, 0, -(i)).Format("20060102")
 				dateList = append(dateList, tmpsDt)
