@@ -17,7 +17,7 @@ func getResultCnt(bsDt, restID, serID string) (int, int) {
 	var err error
 
 	if len(restID) == 0 {
-		statement = "select COUNT(a.BIZ_NUM), SUM(IF(a.MOD_DT > DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 10 MINUTE), '%H%i%s') || a.REG_DT > DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 10 MINUTE), '%H%i%s'),1,0))" +
+		statement = "select COUNT(a.BIZ_NUM), SUM(IF(a.MOD_DT > DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 10 MINUTE), '%H%i%s') || a.REG_DT > DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 10 MINUTE), '%H%i%s'),1,0)) " +
 			"from cc_sync_inf a, cc_comp_inf b where a.BS_DT=? and a.ERR_CD=? and a.BIZ_NUM = b.BIZ_NUM and b.SER_ID=?"
 		rows, err = cls.QueryDBbyParam(statement, bsDt, "0000", serID)
 	} else {
@@ -187,6 +187,12 @@ func insertSync(goID int, syncData SyncInfoType) int {
 
 		// "insert into cc_sync_inf (BIZ_NUM, BS_DT, SITE_CD, APRV_CNT, PCA_CNT, PAY_CNT, REG_DTM, STS_CD, ERR_CD) values (?,?,?,?,?,?,?,?,?)"
 		statement = "insert into cc_sync_inf (" + strings.Join(fields, ", ") + ") values (" + strings.Join(inserts, ", ") + ")"
+	} else if syncData.AprvAmt == syncInfo.AprvAmt && syncData.AprvCnt == syncInfo.AprvCnt &&
+		syncData.PayAmt == syncInfo.PayAmt && syncData.PayCnt == syncInfo.PayCnt &&
+		syncData.PcaAmt == syncInfo.PcaAmt && syncData.PcaCnt == syncInfo.PcaCnt {
+		lprintf(4, "[INFO][go-%d] result success but nothing change (%v) \n", goID, syncInfo)
+		return 0
+
 	} else {
 		var params2 []interface{}
 		for k := 0; k < elements.NumField(); k++ {

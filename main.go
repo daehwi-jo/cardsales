@@ -52,10 +52,20 @@ func main() {
 		lprintf(1, "[ERROR] SCHEDULER not exist value\n")
 		return
 	}
+	cSchd, r := cls.GetTokenValue("CHANNEL", fname)
+	if r == cls.CONF_ERR {
+		lprintf(1, "[ERROR] CHANNEL not exist value\n")
+		return
+	}
+
 	schedules := strings.Split(sch, ",")
 	g := gocron.NewScheduler()
 	for _, schedule := range schedules {
 		g.Every(1).Day().At(schedule).Do(collect, ALL, "", "")
+	}
+	channelSchd := strings.Split(cSchd, ",")
+	for _, schedule := range channelSchd {
+		g.Every(1).Day().At(schedule).Do(callChannel, ALL, "", "")
 	}
 	g.Start()
 	defer g.Clear()
@@ -64,6 +74,7 @@ func main() {
 	http.HandleFunc("/reCollects", reCollects)
 	http.HandleFunc("/reCollect", reCollect)
 	http.HandleFunc("/collect", callCollect)
+	http.HandleFunc("/channel", callChannel)
 
 	// SERVER setting
 	// serIP, r := cls.GetTokenValue("SERVER_IP", fname)
@@ -281,8 +292,13 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 
 			}
 
-			// 최종 경과가 실패가 이난 경우 push and file create
-			if result != ERROR {
+			// 최종 경과가 실패이면 다음 주기를 기다림
+			if result == ERROR {
+				return
+			}
+
+			// 주기 호출인 경우만 가맹점 Push, 신규 가맹점만 file create
+			if retryType == POD {
 				// 가맹점 push
 				ok := checkPushState(goID, comp.BizNum, bsDt)
 				if ok {
@@ -290,14 +306,13 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 					updatePushState(goID, comp.BizNum, bsDt)
 					pushURI := "DaRaYo/api/common/commonPush.json?userId=" + comp.BizNum + "&userTy=5&msgCode=5002"
 					cls.HttpRequest("HTTP", "GET", "api.darayo.com", "80", pushURI, true)
-
-					// 금결원 파일생성
-					// 신호를 보낼 때 마다 파일을 생성하는게 맞는지 .... 금결원에 보내기 전에 그날 변경된 내역을 전부 종합해서 보내는 것이 좋을 것 같음
-					// 아래 insertsync 부분을 참고, 신규 가입자만 잘 구분해서 보내면 될 것 같음.(신규 가입 데이터는 가입 다음날 오후에 데이터가 전송되야 하므로  )
-					lprintf(4, "[INFO][go-%d] make kftc file:(%s) \n", goID, comp.BizNum)
-					makeURI := "CashCombine/v1/csv/makeKftcData.json?bizNum=" + comp.BizNum + "&bsDt=" + bsDt
-					cls.HttpRequest("HTTP", "POST", "49.50.172.227", "7180", makeURI, true)
 				}
+			} else if retryType == NEW {
+				// 금결원 파일생성 주기적인 결과는 금결원에 보내기 전에 그날 변경된 내역을 전부 종합해서 보내는 것이 좋을 것 같음
+				// 신규 가입자만 신호를 보내 전송할 파일을 만들고 익일 주기 데이터 전송시 함께 보냄
+				lprintf(4, "[INFO][go-%d] make kftc file:(%s) \n", goID, comp.BizNum)
+				makeURI := "CashCombine/v1/csv/makeKftcData.json?bizNum=" + comp.BizNum + "&bsDt=" + bsDt + "&stDt=" + dateList[0]
+				cls.HttpRequest("HTTP", "POST", "49.50.172.227", "7180", makeURI, true)
 			}
 
 			if comp.LnFirstYn == "N" {
@@ -309,25 +324,46 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 	}
 	wg.Wait()
 
-	// 수집결과 체크
 	sumCnt, retCnt := getResultCnt(bsDt, restID, serID)
-
-	// 카카오워크 send -> 주기 수집인 경우
-	if retryType == POD {
-		if sumCnt == len(compInfors) && retCnt > 0 {
-			errMsg := fmt.Sprintf("[%s]매출데이터 수집 성공/전체 (%d/%d store)", serID, sumCnt, len(compInfors))
-			sendChannel("전체 가맹점 수집 성공", errMsg)
+	if retryType == NEW {
+		if retCnt > 0 {
+			errMsg := fmt.Sprintf("[%s] 신규 가입자 매출데이터 수집 성공 : restID (%s)", serID, restID)
+			sendChannel("신규 가맹점 수집 성공", errMsg)
 		} else {
-			errMsg := fmt.Sprintf("[%s]매출데이터 수집 실패 실패 가맹점 수 (%d store)", serID, len(compInfors)-sumCnt)
-			sendChannel("수집 실패 가맹점 발생", errMsg)
+			errMsg := fmt.Sprintf("[%s] 신규 가입자 매출데이터 수집 실패 : restID (%s)", serID, restID)
+			sendChannel("신규 가맹점 수집 실패 발생", errMsg)
 		}
 	}
+
 	// 신규 수집인 경우 에도 카카오 워크에 알림이 좋을 것 같음
 	// if retryType == NEW {}
 	lprintf(4, ">> collect END.... [%d:%s:%s][%d/%d] << \n", searchTy, restID, reqDt, sumCnt, len(compInfors))
 	lprintf(3, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
 
-	return sumCnt
+	if retryType == RTY {
+		return sumCnt
+	}
+	return retCnt
+
+}
+
+// channel push (결과)
+func callChannel(w http.ResponseWriter, r *http.Request) {
+	bsDt := r.FormValue("bsDt")
+
+	// 수집 대상 회사
+	compInfors := getCompInfos(serID, bsDt)
+
+	// 수집결과 체크
+	sumCnt, retCnt := getResultCnt(bsDt, "", serID)
+
+	if sumCnt == len(compInfors) && retCnt > 0 {
+		errMsg := fmt.Sprintf("[%s]매출데이터 수집 성공/전체 (%d/%d store)", serID, sumCnt, len(compInfors))
+		sendChannel("전체 가맹점 수집 성공", errMsg)
+	} else {
+		errMsg := fmt.Sprintf("[%s]매출데이터 수집 실패 실패 가맹점 수 (%d store)", serID, len(compInfors)-sumCnt)
+		sendChannel("수집 실패 가맹점 발생", errMsg)
+	}
 }
 
 func getSalesData(dateList []string, goID int, comp CompInfoType, code string, cookies []*http.Cookie) (int, int) {
@@ -369,7 +405,7 @@ func getSalesData(dateList []string, goID int, comp CompInfoType, code string, c
 		// Sync 결과 저장(정상)
 		lprintf(4, "[INFO][go-%d] success => %v \n", goID, selBsDt)
 		sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, apprCnt, apprAmt, pcaCnt, pcaAmt, payCnt, payAmt, time.Now().Format("20060102150405"), "", "1", CcErrNo}
-		// 과거와 변경이 없는 경우 업데이트를 하지 않아서, 금결원 파일 생성을 피하게 하는 것이 좋을 것 같음
+		// 과거와 변경이 없는 경우 업데이트를 하지 않아서, 금결원 파일 생성을 피함
 		insertSync(goID, sync)
 	}
 	return NOERR, 0
@@ -1219,6 +1255,7 @@ func reqHttpLoginAgain(goID int, cookie []*http.Cookie, address, referer string,
 
 func reqHttp(goID int, cookie []*http.Cookie, address, referer string, comp CompInfoType) (*http.Response, error) {
 	lprintf(4, "[INFO][go-%d] http NewRequest (%s) \n", goID, address)
+	time.Sleep(1000 * time.Millisecond)
 	req, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		lprintf(1, "[ERROR][go-%d] http NewRequest (%s) \n", goID, err.Error())
