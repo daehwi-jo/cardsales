@@ -293,7 +293,7 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 
 					// 금결원 파일생성
 					// 신호를 보낼 때 마다 파일을 생성하는게 맞는지 .... 금결원에 보내기 전에 그날 변경된 내역을 전부 종합해서 보내는 것이 좋을 것 같음
-					// 신규 가입자만 잘 구분해서 보내면 될 것 같음.
+					// 아래 insertsync 부분을 참고, 신규 가입자만 잘 구분해서 보내면 될 것 같음.(신규 가입 데이터는 가입 다음날 오후에 데이터가 전송되야 하므로  )
 					lprintf(4, "[INFO][go-%d] make kftc file:(%s) \n", goID, comp.BizNum)
 					makeURI := "CashCombine/v1/csv/makeKftcData.json?bizNum=" + comp.BizNum + "&bsDt=" + bsDt
 					cls.HttpRequest("HTTP", "POST", "49.50.172.227", "7180", makeURI, true)
@@ -323,7 +323,7 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 		}
 	}
 	// 신규 수집인 경우 에도 카카오 워크에 알림이 좋을 것 같음
-
+	// if retryType == NEW {}
 	lprintf(4, ">> collect END.... [%d:%s:%s][%d/%d] << \n", searchTy, restID, reqDt, sumCnt, len(compInfors))
 	lprintf(3, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
 
@@ -369,6 +369,7 @@ func getSalesData(dateList []string, goID int, comp CompInfoType, code string, c
 		// Sync 결과 저장(정상)
 		lprintf(4, "[INFO][go-%d] success => %v \n", goID, selBsDt)
 		sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, apprCnt, apprAmt, pcaCnt, pcaAmt, payCnt, payAmt, time.Now().Format("20060102150405"), "", "1", CcErrNo}
+		// 과거와 변경이 없는 경우 업데이트를 하지 않아서, 금결원 파일 생성을 피하게 하는 것이 좋을 것 같음
 		insertSync(goID, sync)
 	}
 	return NOERR, 0
