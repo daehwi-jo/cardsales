@@ -25,15 +25,18 @@ const (
 )
 
 const (
-	ALL   = iota // 0
-	ONE          // 1 --> 지정한 하루 수집
-	MON          // 2 --> 지난달 1일 부터 수집
-	WEK          // 3 --> 7 일 수집
-	RETRY        // 4 --> 재 수집
+	ALL = iota // 0
+	ONE        // 1 --> 지정한 하루 수집
+	MON        // 2 --> 지난달 1일 부터 수집
+	WEK        // 3 --> 7 일 수집
+	RTY        // 4 --> 재 수집
+	POD        // 5 --> 정기 수집
+	NEW        // 6 --> 신규 수집
 )
 
 const (
 	NOERR = iota
+	ERROR
 )
 
 const (

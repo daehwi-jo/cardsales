@@ -95,7 +95,7 @@ func newMember(w http.ResponseWriter, r *http.Request) {
 		lprintf(1, "[ERROR]Required parameter missing\n")
 		http.Error(w, "Required parameter missing", http.StatusBadRequest)
 	} else {
-		ret := collect(MON, restID, "", MON)
+		ret := collect(MON, restID, "", NEW)
 		if ret <= 0 {
 			// fmt.Fprintln(w, "{\"code\":\"", http.StatusBadRequest, "\",\"cnt\":\"", ret, "\"}")
 			fmt.Fprintf(w, "{\"code\":\"%d\",\"cnt\":\"%d\"}\n", http.StatusBadRequest, ret)
@@ -119,7 +119,7 @@ func reCollects(w http.ResponseWriter, r *http.Request) {
 		lprintf(1, "[ERROR]Required parameter missing\n")
 		http.Error(w, "Required parameter missing", http.StatusBadRequest)
 	} else {
-		ret := collect(WEK, restID, bsDt, RETRY)
+		ret := collect(WEK, restID, bsDt, RTY)
 		if ret <= 0 {
 			fmt.Fprintf(w, "{\"code\":\"%d\",\"cnt\":\"%d\"}\n", http.StatusBadRequest, ret)
 		} else {
@@ -141,7 +141,7 @@ func reCollect(w http.ResponseWriter, r *http.Request) {
 		lprintf(1, "[ERROR]Required parameter missing\n")
 		http.Error(w, "Required parameter missing", http.StatusBadRequest)
 	} else {
-		ret := collect(ONE, restID, bsDt, RETRY)
+		ret := collect(ONE, restID, bsDt, RTY)
 		if ret <= 0 {
 			fmt.Fprintf(w, "{\"code\":\"%d\",\"cnt\":\"%d\"}\n", http.StatusBadRequest, ret)
 		} else {
@@ -157,7 +157,7 @@ func callCollect(w http.ResponseWriter, r *http.Request) {
 	bsDt := r.FormValue("bsDt")
 	lprintf(3, ">> callCollect START .... [%s] << \n", bsDt)
 
-	ret := collect(WEK, "", bsDt, WEK)
+	ret := collect(WEK, "", bsDt, POD)
 	if ret == 0 {
 		fmt.Fprintf(w, "{\"code\":\"%d\",\"cnt\":\"%d\"}\n", http.StatusBadRequest, ret)
 	} else {
@@ -233,7 +233,7 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 			endDt := bsDt
 
 			// 명시적 재수집이 아닌 경우 이전 데이터수집 결과 조회 (오늘 돌았던 적이 있고, 정상이면 수집 안함).
-			if retryType != RETRY {
+			if retryType != RTY {
 				syncInfos := selectSync(goID, comp.BizNum, startDt, endDt)
 				lprintf(4, "[INFO][go-%d] syncInfos=%v \n", goID, syncInfos)
 				// 이전 결과 상태 체크
@@ -274,14 +274,15 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 			}
 			lprintf(4, "[INFO][go-%d] getGrpId (%v) \n", goID, grpIds)
 
-			var result int
-			if result = getSalesData(dateList, goID, comp, grpIds[0].Code, cookie); result == RETRY {
+			var result, erridx int
+			if result, erridx = getSalesData(dateList, goID, comp, grpIds[0].Code, cookie); result == ERROR {
 				time.Sleep(1 * time.Minute)
-				result = getSalesData(dateList, goID, comp, grpIds[0].Code, cookie)
+				result, _ = getSalesData(dateList[erridx:], goID, comp, grpIds[0].Code, cookie)
+
 			}
 
 			// 최종 경과가 실패가 이난 경우 push and file create
-			if result != RETRY {
+			if result != ERROR {
 				// 가맹점 push
 				ok := checkPushState(goID, comp.BizNum, bsDt)
 				if ok {
@@ -312,7 +313,7 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 	sumCnt, retCnt := getResultCnt(bsDt, restID, serID)
 
 	// 카카오워크 send -> 주기 수집인 경우
-	if retryType == WEK {
+	if retryType == POD {
 		if sumCnt == len(compInfors) && retCnt > 0 {
 			errMsg := fmt.Sprintf("[%s]매출데이터 수집 성공/전체 (%d/%d store)", serID, sumCnt, len(compInfors))
 			sendChannel("전체 가맹점 수집 성공", errMsg)
@@ -321,6 +322,7 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 			sendChannel("수집 실패 가맹점 발생", errMsg)
 		}
 	}
+	// 신규 수집인 경우 에도 카카오 워크에 알림이 좋을 것 같음
 
 	lprintf(4, ">> collect END.... [%d:%s:%s][%d/%d] << \n", searchTy, restID, reqDt, sumCnt, len(compInfors))
 	lprintf(3, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
@@ -328,9 +330,10 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 	return sumCnt
 }
 
-func getSalesData(dateList []string, goID int, comp CompInfoType, code string, cookies []*http.Cookie) int {
+func getSalesData(dateList []string, goID int, comp CompInfoType, code string, cookies []*http.Cookie) (int, int) {
 	bizNum := comp.BizNum
-	for _, selBsDt := range dateList {
+	for i, selBsDt := range dateList {
+		time.Sleep(5 * time.Second)
 		lprintf(3, "[INFO][go-%d] 수집일=%s\n", goID, selBsDt)
 		//////////////////////////////////////
 		// 1.승인 내역 처리
@@ -339,7 +342,7 @@ func getSalesData(dateList []string, goID int, comp CompInfoType, code string, c
 			// Sync 결과 저장(오류)
 			sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, "0", "0", "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", apprErrCd}
 			insertSync(goID, sync)
-			return RETRY
+			return ERROR, i
 		}
 		cookies = newCookie
 		//////////////////////////////////////
@@ -349,7 +352,7 @@ func getSalesData(dateList []string, goID int, comp CompInfoType, code string, c
 			// Sync 결과 저장(오류)
 			sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, apprCnt, apprAmt, "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", pcaErrCd}
 			insertSync(goID, sync)
-			return RETRY
+			return ERROR, i
 		}
 		cookies = newCookie
 		//////////////////////////////////////
@@ -359,7 +362,7 @@ func getSalesData(dateList []string, goID int, comp CompInfoType, code string, c
 			// Sync 결과 저장(오류)
 			sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, apprCnt, apprAmt, pcaCnt, pcaAmt, "0", "0", time.Now().Format("20060102150405"), "", "2", payErrCd}
 			insertSync(goID, sync)
-			return RETRY
+			return ERROR, i
 		}
 
 		//////////////////////////////////////
@@ -368,7 +371,7 @@ func getSalesData(dateList []string, goID int, comp CompInfoType, code string, c
 		sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, apprCnt, apprAmt, pcaCnt, pcaAmt, payCnt, payAmt, time.Now().Format("20060102150405"), "", "1", CcErrNo}
 		insertSync(goID, sync)
 	}
-	return NOERR
+	return NOERR, 0
 }
 
 func login(goID int, loginId, password string) (*LoginResponse, error) {
@@ -1196,6 +1199,7 @@ func reqHttpLoginAgain(goID int, cookie []*http.Cookie, address, referer string,
 	if respData.StatusCode == 302 {
 		lprintf(4, "[INFO][go-%d] login out=(%s) \n", goID, respData)
 		respData.Body.Close()
+		time.Sleep(3000 * time.Millisecond)
 		resp, err := login(goID, comp.LnID, comp.LnPsw)
 		if err != nil {
 			lprintf(1, "[ERROR][go-%d] login again error=(%s) \n", goID, err)
@@ -1214,7 +1218,6 @@ func reqHttpLoginAgain(goID int, cookie []*http.Cookie, address, referer string,
 
 func reqHttp(goID int, cookie []*http.Cookie, address, referer string, comp CompInfoType) (*http.Response, error) {
 	lprintf(4, "[INFO][go-%d] http NewRequest (%s) \n", goID, address)
-	time.Sleep(1000 * time.Millisecond)
 	req, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		lprintf(1, "[ERROR][go-%d] http NewRequest (%s) \n", goID, err.Error())
