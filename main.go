@@ -168,7 +168,7 @@ func callCollect(w http.ResponseWriter, r *http.Request) {
 	bsDt := r.FormValue("bsDt")
 	lprintf(3, ">> callCollect START .... [%s] << \n", bsDt)
 
-	ret := collect(WEK, "", bsDt, POD)
+	ret := collect(ONE, "", bsDt, POD)
 	if ret == 0 {
 		fmt.Fprintf(w, "{\"code\":\"%d\",\"cnt\":\"%d\"}\n", http.StatusBadRequest, ret)
 	} else {
