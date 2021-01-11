@@ -11,7 +11,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"charlie/cls"
@@ -238,99 +237,99 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 		searchDay = 1
 	}
 
-	wg := sync.WaitGroup{}
+	//	wg := sync.WaitGroup{}
 	for idx, compInfo := range compInfors {
 		goID := idx
 		comp := compInfo
-		wg.Add(1) // WaitGroup의 고루틴 개수 1 증가
-		go func() {
-			defer wg.Done()
+		//	wg.Add(1) // WaitGroup의 고루틴 개수 1 증가
+		//	go func() {
+		//		defer wg.Done()
 
-			// 수집할 날자 리스트 만듬
-			var dateList []string
-			startDt := timeBsDt.AddDate(0, 0, -(searchDay - 1)).Format("20060102")
-			endDt := bsDt
+		// 수집할 날자 리스트 만듬
+		var dateList []string
+		startDt := timeBsDt.AddDate(0, 0, -(searchDay - 1)).Format("20060102")
+		endDt := bsDt
 
-			// 명시적 재수집이 아닌 경우 이전 데이터수집 결과 조회 (오늘 돌았던 적이 있고, 정상이면 수집 안함).
-			if retryType != RTY {
-				syncInfos := selectSync(goID, comp.BizNum, startDt, endDt)
-				lprintf(4, "[INFO][go-%d] syncInfos=%v \n", goID, syncInfos)
-				// 이전 결과 상태 체크
-				if syncInfos[bsDt].StsCd != "2" && len(syncInfos[bsDt].StsCd) != 0 {
-					// 오늘 수집 정상 SKIP
-					lprintf(4, "[INFO][go-%d] today collect success already (%s)\n", goID, comp.BizNum)
-					return
-				}
+		// 명시적 재수집이 아닌 경우 이전 데이터수집 결과 조회 (오늘 돌았던 적이 있고, 정상이면 수집 안함).
+		if retryType != RTY {
+			syncInfos := selectSync(goID, comp.BizNum, startDt, endDt)
+			lprintf(4, "[INFO][go-%d] syncInfos=%v \n", goID, syncInfos)
+			// 이전 결과 상태 체크
+			if syncInfos[bsDt].StsCd != "2" && len(syncInfos[bsDt].StsCd) != 0 {
+				// 오늘 수집 정상 SKIP
+				lprintf(4, "[INFO][go-%d] today collect success already (%s)\n", goID, comp.BizNum)
+				continue // return
 			}
+		}
 
-			// 과거 일부터 수집 시작, 따라서 오늘자 수집 데이터가 정상이면 7일치를 다 정상으로 조회했음을 의미
-			for i := searchDay - 1; i >= 0; i-- {
-				tmpsDt := timeBsDt.AddDate(0, 0, -(i)).Format("20060102")
-				dateList = append(dateList, tmpsDt)
+		// 과거 일부터 수집 시작, 따라서 오늘자 수집 데이터가 정상이면 7일치를 다 정상으로 조회했음을 의미
+		for i := searchDay - 1; i >= 0; i-- {
+			tmpsDt := timeBsDt.AddDate(0, 0, -(i)).Format("20060102")
+			dateList = append(dateList, tmpsDt)
+		}
+		lprintf(4, "[INFO][go-%d] dateList (%v)\n", goID, dateList)
+
+		// login
+		resp, err := login(goID, comp.LnID, comp.LnPsw)
+		if err != nil {
+			lprintf(1, "[ERROR][go-%d] login fail (%s)\n", goID, err.Error())
+			// Sync 결과 저장 (login 오류, 조회 시작 기준 일로)
+			sync := SyncInfoType{comp.BizNum, strings.ReplaceAll(bsDt, "-", ""), siteCd, "0", "0", "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", CcErrLogin, ""}
+			insertSync(goID, sync)
+			continue // return
+		}
+		cookie := resp.Cookie
+		lprintf(4, "[INFO][go-%d] login succes wait 100 ms(%v) \n", goID, comp.LnID)
+
+		// grpId가 여러개일 경우(한명이 여러 사업자를 가진 경우) 처리 추가 필요함
+		grpIds, err, newCookie := getGrpId(goID, resp.Cookie, comp)
+		cookie = newCookie
+		if err != nil {
+			lprintf(1, "[ERROR][go-%d] getGrpId (%s) \n", goID, err.Error())
+			sync := SyncInfoType{comp.BizNum, strings.ReplaceAll(bsDt, "-", ""), siteCd, "0", "0", "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", CcErrGrpId, ""}
+			insertSync(goID, sync)
+			continue // return
+		}
+		lprintf(4, "[INFO][go-%d] getGrpId (%v) \n", goID, grpIds)
+
+		var result, erridx int
+		if result, erridx = getSalesData(dateList, goID, comp, grpIds[0].Code, cookie, sendDt); result == ERROR {
+			time.Sleep(1 * time.Minute)
+			result, _ = getSalesData(dateList[erridx:], goID, comp, grpIds[0].Code, cookie, sendDt)
+
+		}
+
+		// 최종 경과가 실패이면 다음 주기를 기다림
+		if result == ERROR {
+			continue // return
+		}
+
+		// 주기 호출인 경우만 가맹점 Push, 신규 가맹점만 file create
+		if retryType == POD {
+			// 가맹점 push
+			ok := checkPushState(goID, comp.BizNum, bsDt)
+			if ok {
+				lprintf(4, "[INFO][go-%d] send Push:(%s) \n", goID, comp.BizNum)
+				updatePushState(goID, comp.BizNum, bsDt)
+				pushURI := "DaRaYo/api/common/commonPush.json?userId=" + comp.BizNum + "&userTy=5&msgCode=5002"
+				cls.HttpRequest("HTTP", "GET", "api.darayo.com", "80", pushURI, true)
 			}
-			lprintf(4, "[INFO][go-%d] dateList (%v)\n", goID, dateList)
+		} else if retryType == NEW {
+			// 금결원 파일생성 주기적인 결과는 금결원에 보내기 전에 그날 변경된 내역을 전부 종합해서 보내는 것이 좋을 것 같음
+			// 신규 가입자만 신호를 보내 전송할 파일을 만들고 익일 주기 데이터 전송시 함께 보냄
+			lprintf(4, "[INFO][go-%d] make kftc file:(%s) \n", goID, comp.BizNum)
+			makeURI := "CashCombine/v1/csv/makeKftcData.json?bizNum=" + comp.BizNum + "&bsDt=" + bsDt + "&stDt=" + dateList[0]
+			cls.HttpRequest("HTTP", "POST", "49.50.172.227", "7180", makeURI, true)
+		}
 
-			// login
-			resp, err := login(goID, comp.LnID, comp.LnPsw)
-			if err != nil {
-				lprintf(1, "[ERROR][go-%d] login fail (%s)\n", goID, err.Error())
-				// Sync 결과 저장 (login 오류, 조회 시작 기준 일로)
-				sync := SyncInfoType{comp.BizNum, strings.ReplaceAll(bsDt, "-", ""), siteCd, "0", "0", "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", CcErrLogin, ""}
-				insertSync(goID, sync)
-				return
-			}
-			cookie := resp.Cookie
-			lprintf(4, "[INFO][go-%d] login succes wait 100 ms(%v) \n", goID, comp.LnID)
+		if comp.LnFirstYn == "N" {
+			updateCompInfo(goID, comp.BizNum)
+			comp.LnFirstYn = "Y"
+		}
 
-			// grpId가 여러개일 경우(한명이 여러 사업자를 가진 경우) 처리 추가 필요함
-			grpIds, err, newCookie := getGrpId(goID, resp.Cookie, comp)
-			cookie = newCookie
-			if err != nil {
-				lprintf(1, "[ERROR][go-%d] getGrpId (%s) \n", goID, err.Error())
-				sync := SyncInfoType{comp.BizNum, strings.ReplaceAll(bsDt, "-", ""), siteCd, "0", "0", "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", CcErrGrpId, ""}
-				insertSync(goID, sync)
-				return
-			}
-			lprintf(4, "[INFO][go-%d] getGrpId (%v) \n", goID, grpIds)
-
-			var result, erridx int
-			if result, erridx = getSalesData(dateList, goID, comp, grpIds[0].Code, cookie, sendDt); result == ERROR {
-				time.Sleep(1 * time.Minute)
-				result, _ = getSalesData(dateList[erridx:], goID, comp, grpIds[0].Code, cookie, sendDt)
-
-			}
-
-			// 최종 경과가 실패이면 다음 주기를 기다림
-			if result == ERROR {
-				return
-			}
-
-			// 주기 호출인 경우만 가맹점 Push, 신규 가맹점만 file create
-			if retryType == POD {
-				// 가맹점 push
-				ok := checkPushState(goID, comp.BizNum, bsDt)
-				if ok {
-					lprintf(4, "[INFO][go-%d] send Push:(%s) \n", goID, comp.BizNum)
-					updatePushState(goID, comp.BizNum, bsDt)
-					pushURI := "DaRaYo/api/common/commonPush.json?userId=" + comp.BizNum + "&userTy=5&msgCode=5002"
-					cls.HttpRequest("HTTP", "GET", "api.darayo.com", "80", pushURI, true)
-				}
-			} else if retryType == NEW {
-				// 금결원 파일생성 주기적인 결과는 금결원에 보내기 전에 그날 변경된 내역을 전부 종합해서 보내는 것이 좋을 것 같음
-				// 신규 가입자만 신호를 보내 전송할 파일을 만들고 익일 주기 데이터 전송시 함께 보냄
-				lprintf(4, "[INFO][go-%d] make kftc file:(%s) \n", goID, comp.BizNum)
-				makeURI := "CashCombine/v1/csv/makeKftcData.json?bizNum=" + comp.BizNum + "&bsDt=" + bsDt + "&stDt=" + dateList[0]
-				cls.HttpRequest("HTTP", "POST", "49.50.172.227", "7180", makeURI, true)
-			}
-
-			if comp.LnFirstYn == "N" {
-				updateCompInfo(goID, comp.BizNum)
-				comp.LnFirstYn = "Y"
-			}
-
-		}()
+		//		}()
 	}
-	wg.Wait()
+	//	wg.Wait()
 
 	sumCnt, retCnt := getResultCnt(bsDt, restID, serID)
 	if retryType == NEW {

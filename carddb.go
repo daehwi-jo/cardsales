@@ -189,7 +189,8 @@ func insertSync(goID int, syncData SyncInfoType) int {
 		statement = "insert into cc_sync_inf (" + strings.Join(fields, ", ") + ") values (" + strings.Join(inserts, ", ") + ")"
 	} else if syncData.AprvAmt == syncInfo.AprvAmt && syncData.AprvCnt == syncInfo.AprvCnt &&
 		syncData.PayAmt == syncInfo.PayAmt && syncData.PayCnt == syncInfo.PayCnt &&
-		syncData.PcaAmt == syncInfo.PcaAmt && syncData.PcaCnt == syncInfo.PcaCnt {
+		syncData.PcaAmt == syncInfo.PcaAmt && syncData.PcaCnt == syncInfo.PcaCnt &&
+		syncData.ErrCd == syncInfo.ErrCd {
 		lprintf(4, "[INFO][go-%d] result success but nothing change (%v) \n", goID, syncInfo)
 		return 0
 
