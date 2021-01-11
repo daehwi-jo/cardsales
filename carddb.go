@@ -210,7 +210,8 @@ func insertSync(goID int, syncData SyncInfoType) int {
 					} else if strings.Compare(field, "APRV_CNT") == 0 || strings.Compare(field, "APRV_AMT") == 0 ||
 						strings.Compare(field, "PCA_CNT") == 0 || strings.Compare(field, "PCA_AMT") == 0 ||
 						strings.Compare(field, "PAY_CNT") == 0 || strings.Compare(field, "PAY_AMT") == 0 ||
-						strings.Compare(field, "STS_CD") == 0 || strings.Compare(field, "ERR_CD") == 0 {
+						strings.Compare(field, "STS_CD") == 0 || strings.Compare(field, "ERR_CD") == 0 ||
+						strings.Compare(field, "SEND_DT") == 0 {
 						fields = append(fields, fmt.Sprint(field, "=?"))
 						params = append(params, value)
 					} else {

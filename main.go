@@ -189,7 +189,15 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 	} else {
 		bsDt = time.Now().AddDate(0, 0, -1).Format("20060102")
 	}
-	lprintf(3, "[INFO] 오늘=%s, 조회일=%s\n", today, bsDt)
+
+	// 21시가 지났거나 신규 가맹점은 수집 후 +1일에 전송
+	sendDt := today
+	nowTime := time.Now().Format("130405")
+	if retryType == NEW || nowTime > "21" {
+		sendDt = time.Now().AddDate(0, 0, 1).Format("20060102")
+	}
+
+	lprintf(3, "[INFO] 오늘=%s, 조회일=%s, 전송일=%s\n", today, bsDt, sendDt)
 
 	// 날짜변경을 위해 조회기준일을 Time 값으로 변경
 	timeBsDt, err := time.Parse("20060102", bsDt)
@@ -267,7 +275,7 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 			if err != nil {
 				lprintf(1, "[ERROR][go-%d] login fail (%s)\n", goID, err.Error())
 				// Sync 결과 저장 (login 오류, 조회 시작 기준 일로)
-				sync := SyncInfoType{comp.BizNum, strings.ReplaceAll(bsDt, "-", ""), siteCd, "0", "0", "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", CcErrLogin}
+				sync := SyncInfoType{comp.BizNum, strings.ReplaceAll(bsDt, "-", ""), siteCd, "0", "0", "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", CcErrLogin, ""}
 				insertSync(goID, sync)
 				return
 			}
@@ -279,16 +287,16 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 			cookie = newCookie
 			if err != nil {
 				lprintf(1, "[ERROR][go-%d] getGrpId (%s) \n", goID, err.Error())
-				sync := SyncInfoType{comp.BizNum, strings.ReplaceAll(bsDt, "-", ""), siteCd, "0", "0", "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", CcErrGrpId}
+				sync := SyncInfoType{comp.BizNum, strings.ReplaceAll(bsDt, "-", ""), siteCd, "0", "0", "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", CcErrGrpId, ""}
 				insertSync(goID, sync)
 				return
 			}
 			lprintf(4, "[INFO][go-%d] getGrpId (%v) \n", goID, grpIds)
 
 			var result, erridx int
-			if result, erridx = getSalesData(dateList, goID, comp, grpIds[0].Code, cookie); result == ERROR {
+			if result, erridx = getSalesData(dateList, goID, comp, grpIds[0].Code, cookie, sendDt); result == ERROR {
 				time.Sleep(1 * time.Minute)
-				result, _ = getSalesData(dateList[erridx:], goID, comp, grpIds[0].Code, cookie)
+				result, _ = getSalesData(dateList[erridx:], goID, comp, grpIds[0].Code, cookie, sendDt)
 
 			}
 
@@ -366,7 +374,7 @@ func callChannel(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getSalesData(dateList []string, goID int, comp CompInfoType, code string, cookies []*http.Cookie) (int, int) {
+func getSalesData(dateList []string, goID int, comp CompInfoType, code string, cookies []*http.Cookie, sendDt string) (int, int) {
 	bizNum := comp.BizNum
 	for i, selBsDt := range dateList {
 		time.Sleep(5 * time.Second)
@@ -376,7 +384,7 @@ func getSalesData(dateList []string, goID int, comp CompInfoType, code string, c
 		apprCnt, apprAmt, apprErrCd, newCookie := getApproval(goID, cookies, selBsDt, code, comp)
 		if apprErrCd != CcErrNo && apprErrCd != CcErrNoData && apprErrCd != CcErrSameData {
 			// Sync 결과 저장(오류)
-			sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, "0", "0", "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", apprErrCd}
+			sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, "0", "0", "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", apprErrCd, ""}
 			insertSync(goID, sync)
 			return ERROR, i
 		}
@@ -386,7 +394,7 @@ func getSalesData(dateList []string, goID int, comp CompInfoType, code string, c
 		pcaCnt, pcaAmt, pcaErrCd, newCookie := getPurchase(goID, cookies, selBsDt, code, comp)
 		if pcaErrCd != CcErrNo && pcaErrCd != CcErrNoData && pcaErrCd != CcErrSameData {
 			// Sync 결과 저장(오류)
-			sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, apprCnt, apprAmt, "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", pcaErrCd}
+			sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, apprCnt, apprAmt, "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", pcaErrCd, ""}
 			insertSync(goID, sync)
 			return ERROR, i
 		}
@@ -396,7 +404,7 @@ func getSalesData(dateList []string, goID int, comp CompInfoType, code string, c
 		payCnt, payAmt, payErrCd, newCookie := getPayment(goID, cookies, selBsDt, selBsDt, code, comp)
 		if payErrCd != CcErrNo && payErrCd != CcErrNoData && payErrCd != CcErrSameData {
 			// Sync 결과 저장(오류)
-			sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, apprCnt, apprAmt, pcaCnt, pcaAmt, "0", "0", time.Now().Format("20060102150405"), "", "2", payErrCd}
+			sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, apprCnt, apprAmt, pcaCnt, pcaAmt, "0", "0", time.Now().Format("20060102150405"), "", "2", payErrCd, ""}
 			insertSync(goID, sync)
 			return ERROR, i
 		}
@@ -404,7 +412,7 @@ func getSalesData(dateList []string, goID int, comp CompInfoType, code string, c
 		//////////////////////////////////////
 		// Sync 결과 저장(정상)
 		lprintf(4, "[INFO][go-%d] success => %v \n", goID, selBsDt)
-		sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, apprCnt, apprAmt, pcaCnt, pcaAmt, payCnt, payAmt, time.Now().Format("20060102150405"), "", "1", CcErrNo}
+		sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, apprCnt, apprAmt, pcaCnt, pcaAmt, payCnt, payAmt, time.Now().Format("20060102150405"), "", "1", CcErrNo, sendDt}
 		// 과거와 변경이 없는 경우 업데이트를 하지 않아서, 금결원 파일 생성을 피함
 		insertSync(goID, sync)
 	}

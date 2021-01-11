@@ -44,6 +44,7 @@ type SyncInfoType struct {
 	ModDt   string `db:"MOD_DT"`   // 수정일시
 	StsCd   string `db:"STS_CD"`   // Sync실행상태
 	ErrCd   string `db:"ERR_CD"`   // 에러코드
+	SendDt  string `db:"SEND_DT"`  // 전송일자
 }
 
 type ApprovalSumType struct {
