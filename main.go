@@ -1280,15 +1280,15 @@ func reqHttpLoginAgain(goID int, cookie []*http.Cookie, address, referer string,
 
 	// send request
 	client := &http.Client{
-		Timeout: time.Second * 10,
+		Timeout: time.Second * 15,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
+		//	Transport: &http.Transport{
+		//		TLSClientConfig: &tls.Config{
+		//			InsecureSkipVerify: true,
+		//		},
+		//		},
 	}
 	respData, err := client.Do(req)
 	if err != nil {
@@ -1336,7 +1336,7 @@ func reqHttp(goID int, cookie []*http.Cookie, address, referer string, comp Comp
 
 	// send request
 	client := &http.Client{
-		Timeout: time.Second * 10,
+		Timeout: time.Second * 15,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
