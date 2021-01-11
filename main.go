@@ -274,24 +274,29 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 		startDt := timeBsDt.AddDate(0, 0, -(searchDay - 1)).Format("20060102")
 		endDt := bsDt
 
-		// 매일 당일 조회는 이전 데이터수집 결과 조회 (오늘 돌았던 적이 있고, 정상이면 수집 안함).
-		if retryType == POD && searchTy == ONE {
-			syncInfos := selectSync(goID, comp.BizNum, startDt, endDt)
-			lprintf(4, "[INFO][go-%d] syncInfos=%v \n", goID, syncInfos)
-			// 이전 결과 상태 체크
-			if syncInfos[bsDt].StsCd != "2" && len(syncInfos[bsDt].StsCd) != 0 {
-				// 오늘 수집 정상 SKIP
-				lprintf(4, "[INFO][go-%d] today collect success already (%s)\n", goID, comp.BizNum)
-				continue // return
-			}
-		}
-
-		// 과거 일부터 수집 시작, 따라서 오늘자 수집 데이터가 정상이면 7일치를 다 정상으로 조회했음을 의미
+		// 과거 일부터 수집 시작
 		for i := searchDay - 1; i >= 0; i-- {
 			tmpsDt := timeBsDt.AddDate(0, 0, -(i)).Format("20060102")
 			dateList = append(dateList, tmpsDt)
 		}
 		lprintf(4, "[INFO][go-%d] dateList (%v)\n", goID, dateList)
+
+		// 매일 당일 조회는 이전 데이터수집 결과 조회 (오늘 돌았던 적이 있고, 정상이면 수집 안함).
+		if retryType == POD {
+			if searchTy == ONE {
+				syncInfos := selectSync(goID, comp.BizNum, startDt, endDt)
+				lprintf(4, "[INFO][go-%d] syncInfos=%v \n", goID, syncInfos)
+				// 이전 결과 상태 체크
+				if syncInfos[bsDt].StsCd != "2" && len(syncInfos[bsDt].StsCd) != 0 {
+					// 오늘 수집 정상 SKIP
+					lprintf(4, "[INFO][go-%d] today collect success already (%s)\n", goID, comp.BizNum)
+					continue // return
+				}
+			} else if searchTy == WEK {
+				// 주간 조회시 오늘 것은 제외
+				dateList = dateList[:len(dateList)-1]
+			}
+		}
 
 		// login
 		resp, err := login(goID, comp.LnID, comp.LnPsw)
