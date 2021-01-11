@@ -283,9 +283,9 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 
 		// 매일 당일 조회는 이전 데이터수집 결과 조회 (오늘 돌았던 적이 있고, 정상이면 수집 안함).
 		if retryType == POD {
+			syncInfos := selectSync(goID, comp.BizNum, startDt, endDt)
+			lprintf(4, "[INFO][go-%d] syncInfos=%v \n", goID, syncInfos)
 			if searchTy == ONE {
-				syncInfos := selectSync(goID, comp.BizNum, startDt, endDt)
-				lprintf(4, "[INFO][go-%d] syncInfos=%v \n", goID, syncInfos)
 				// 이전 결과 상태 체크
 				if syncInfos[bsDt].StsCd != "2" && len(syncInfos[bsDt].StsCd) != 0 {
 					// 오늘 수집 정상 SKIP
@@ -334,7 +334,7 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 		}
 
 		// 주기 호출인 경우만 가맹점 Push, 신규 가맹점만 file create
-		if retryType == POD {
+		if retryType == POD && searchTy == ONE {
 			// 가맹점 push
 			ok := checkPushState(goID, comp.BizNum, bsDt)
 			if ok {
@@ -1273,6 +1273,9 @@ func reqHttpLoginAgain(goID int, cookie []*http.Cookie, address, referer string,
 	}
 	req.Header.Set("Connection", "keep-alive")
 	req.Header.Set("Host", "www.cardsales.or.kr")
+	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+	req.Header.Set("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
+	req.Header.Set("Cache-Control", "max-age=0")
 	req.Header.Set("Referer", referer)
 
 	// send request
@@ -1326,6 +1329,9 @@ func reqHttp(goID int, cookie []*http.Cookie, address, referer string, comp Comp
 	}
 	req.Header.Set("Connection", "keep-alive")
 	req.Header.Set("Host", "www.cardsales.or.kr")
+	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+	req.Header.Set("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
+	req.Header.Set("Cache-Control", "max-age=0")
 	req.Header.Set("Referer", referer)
 
 	// send request
