@@ -279,7 +279,6 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 			tmpsDt := timeBsDt.AddDate(0, 0, -(i)).Format("20060102")
 			dateList = append(dateList, tmpsDt)
 		}
-		lprintf(4, "[INFO][go-%d] dateList (%v)\n", goID, dateList)
 
 		// 매일 당일 조회는 이전 데이터수집 결과 조회 (오늘 돌았던 적이 있고, 정상이면 수집 안함).
 		if retryType == POD {
@@ -293,11 +292,18 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 					continue // return
 				}
 			} else if searchTy == WEK {
-				// 주간 조회시 오늘 것은 제외
-				dateList = dateList[:len(dateList)-1]
+				// 주간 조회시 오늘 업데이트 또는 인서트 된 것은 제외
+				var newDateList []string
+				for _, eachDay := range dateList {
+					if !strings.HasPrefix(syncInfos[eachDay].ModDt, today) &&
+						!strings.HasPrefix(syncInfos[eachDay].RegDt, today) {
+						newDateList = append(newDateList, eachDay)
+					}
+				}
+				dateList = newDateList
 			}
 		}
-
+		lprintf(4, "[INFO][go-%d] search dateList (%v)\n", goID, dateList)
 		// login
 		resp, err := login(goID, comp.LnID, comp.LnPsw)
 		if err != nil {
@@ -405,7 +411,7 @@ func callChannel() {
 func getSalesData(dateList []string, goID int, comp CompInfoType, code string, cookies []*http.Cookie, sendDt string) (int, int) {
 	bizNum := comp.BizNum
 	for i, selBsDt := range dateList {
-		time.Sleep(5 * time.Second)
+		time.Sleep(1 * time.Second)
 		lprintf(3, "[INFO][go-%d] 수집일=%s\n", goID, selBsDt)
 		//////////////////////////////////////
 		// 1.승인 내역 처리
@@ -1280,7 +1286,7 @@ func reqHttpLoginAgain(goID int, cookie []*http.Cookie, address, referer string,
 
 	// send request
 	client := &http.Client{
-		Timeout: time.Second * 15,
+		Timeout: time.Second * 20,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
@@ -1336,7 +1342,7 @@ func reqHttp(goID int, cookie []*http.Cookie, address, referer string, comp Comp
 
 	// send request
 	client := &http.Client{
-		Timeout: time.Second * 15,
+		Timeout: time.Second * 20,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,

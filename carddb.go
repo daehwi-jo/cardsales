@@ -169,6 +169,14 @@ func insertSync(goID int, syncData SyncInfoType) int {
 	}
 	lprintf(4, "[INFO][go-%d] syncInfo (%v) \n", goID, syncInfo)
 
+	if syncData.AprvAmt == syncInfo.AprvAmt && syncData.AprvCnt == syncInfo.AprvCnt &&
+		syncData.PayAmt == syncInfo.PayAmt && syncData.PayCnt == syncInfo.PayCnt &&
+		syncData.PcaAmt == syncInfo.PcaAmt && syncData.PcaCnt == syncInfo.PcaCnt && syncData.ErrCd == syncInfo.ErrCd {
+		// 값이나 조회 결과의 변동은 없으면 send_dt 설정 안함
+		lprintf(4, "[INFO][go-%d] result success but there is not any change (%v) \n", goID, syncInfo)
+		syncData.SendDt = ""
+	}
+
 	// Sync 데이터 저장/업데이트
 	elements := reflect.ValueOf(&syncData).Elem()
 	if len(syncInfo.BizNum) == 0 {
@@ -187,12 +195,6 @@ func insertSync(goID int, syncData SyncInfoType) int {
 
 		// "insert into cc_sync_inf (BIZ_NUM, BS_DT, SITE_CD, APRV_CNT, PCA_CNT, PAY_CNT, REG_DTM, STS_CD, ERR_CD) values (?,?,?,?,?,?,?,?,?)"
 		statement = "insert into cc_sync_inf (" + strings.Join(fields, ", ") + ") values (" + strings.Join(inserts, ", ") + ")"
-	} else if syncData.AprvAmt == syncInfo.AprvAmt && syncData.AprvCnt == syncInfo.AprvCnt &&
-		syncData.PayAmt == syncInfo.PayAmt && syncData.PayCnt == syncInfo.PayCnt &&
-		syncData.PcaAmt == syncInfo.PcaAmt && syncData.PcaCnt == syncInfo.PcaCnt &&
-		syncData.ErrCd == syncInfo.ErrCd {
-		lprintf(4, "[INFO][go-%d] result success but there is not any change (%v) \n", goID, syncInfo)
-		return 0
 	} else if syncData.ErrCd != "0000" && syncInfo.ErrCd == "0000" {
 		// 정상이였던 데이터를 재수집 하다가 에러가 난 경우 sync update 안함
 		lprintf(4, "[INFO][go-%d] result fail but earlier result was success -> do not change (%v) \n", goID, syncInfo)
