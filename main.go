@@ -51,6 +51,11 @@ func main() {
 		lprintf(1, "[ERROR] SCHEDULER not exist value\n")
 		return
 	}
+	wSchd, r := cls.GetTokenValue("WEEKSCHED", fname)
+	if r == cls.CONF_ERR {
+		lprintf(1, "[ERROR] CHANNEL not exist value\n")
+		return
+	}
 	cSchd, r := cls.GetTokenValue("CHANNEL", fname)
 	if r == cls.CONF_ERR {
 		lprintf(1, "[ERROR] CHANNEL not exist value\n")
@@ -60,11 +65,15 @@ func main() {
 	schedules := strings.Split(sch, ",")
 	g := gocron.NewScheduler()
 	for _, schedule := range schedules {
-		g.Every(1).Day().At(schedule).Do(collect, ALL, "", "")
+		g.Every(1).Day().At(schedule).Do(collect, ONE, "", "", POD)
+	}
+	weekSchd := strings.Split(wSchd, ",")
+	for _, schedule := range weekSchd {
+		g.Every(1).Day().At(schedule).Do(collect, WEK, "", "", POD)
 	}
 	channelSchd := strings.Split(cSchd, ",")
 	for _, schedule := range channelSchd {
-		g.Every(1).Day().At(schedule).Do(callChannel, ALL, "", "")
+		g.Every(1).Day().At(schedule).Do(callChannel)
 	}
 	g.Start()
 	defer g.Clear()
@@ -73,7 +82,7 @@ func main() {
 	http.HandleFunc("/reCollects", reCollects)
 	http.HandleFunc("/reCollect", reCollect)
 	http.HandleFunc("/collect", callCollect)
-	http.HandleFunc("/channel", callChannel)
+	http.HandleFunc("/collectweek", weekCollects)
 
 	// SERVER setting
 	// serIP, r := cls.GetTokenValue("SERVER_IP", fname)
@@ -159,6 +168,21 @@ func reCollect(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	lprintf(3, ">> reCollect END .... [%s:%s] << \n", restID, bsDt)
+}
+
+// 기본 7일 데이터 수집
+// param(필수): restId, bsDt
+func weekCollects(w http.ResponseWriter, r *http.Request) {
+	bsDt := r.FormValue("bsDt")
+	lprintf(3, ">> callCollect START .... [%s] << \n", bsDt)
+
+	ret := collect(WEK, "", bsDt, POD)
+	if ret == 0 {
+		fmt.Fprintf(w, "{\"code\":\"%d\",\"cnt\":\"%d\"}\n", http.StatusBadRequest, ret)
+	} else {
+		fmt.Fprintf(w, "{\"code\":\"%d\",\"cnt\":\"%d\"}\n", http.StatusOK, ret)
+	}
+	lprintf(3, ">> callCollect END ....  << \n")
 }
 
 // 기본데이터 수집
@@ -250,8 +274,8 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 		startDt := timeBsDt.AddDate(0, 0, -(searchDay - 1)).Format("20060102")
 		endDt := bsDt
 
-		// 명시적 재수집이 아닌 경우 이전 데이터수집 결과 조회 (오늘 돌았던 적이 있고, 정상이면 수집 안함).
-		if retryType != RTY {
+		// 매일 당일 조회는 이전 데이터수집 결과 조회 (오늘 돌았던 적이 있고, 정상이면 수집 안함).
+		if retryType == POD && searchTy == ONE {
 			syncInfos := selectSync(goID, comp.BizNum, startDt, endDt)
 			lprintf(4, "[INFO][go-%d] syncInfos=%v \n", goID, syncInfos)
 			// 이전 결과 상태 체크
@@ -355,8 +379,8 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 }
 
 // channel push (결과)
-func callChannel(w http.ResponseWriter, r *http.Request) {
-	bsDt := r.FormValue("bsDt")
+func callChannel() {
+	bsDt := time.Now().AddDate(0, 0, -1).Format("20060102")
 
 	// 수집 대상 회사
 	compInfors := getCompInfos(serID, bsDt)
@@ -536,21 +560,28 @@ func getApproval(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 		return "", "", CcErrDb, cookie
 	}
 	lprintf(4, "[INFO][go-%d] getApproval: db approval sum (%v) \n", goID, apprSum)
-	if len(apprSum.TotTrnsCnt) > 0 {
-		if apprSum.compare(approvalSum.ResultSum) == 0 {
-			// DB의 데이터와 새로 수집한 데이터가 다른 경우, 삭제 후 재수집
-			lprintf(3, "[INFO][go-%d] DB=%v\n", goID, *apprSum)
-			lprintf(3, "[INFO][go-%d] WEB=%v\n", goID, approvalSum.ResultSum)
-
-			// deleteSync(goID, bizNum, bsDt)
-			deleteData(goID, ApprovalTy, bizNum, bsDt)
-		} else {
-			// DB의 데이터와 수집데이터가 같은 경우, 정상 응답
-			lprintf(4, "[INFO][go-%d] getApproval: db approval sum amt (%v) = (%v) \n", goID, apprSum.TotTrnsAmt, approvalSum.ResultSum.TotTrnsAmt)
-			return approvalSum.ResultSum.TotTrnsCnt, approvalSum.ResultSum.TotTrnsAmt, CcErrSameData, cookie
-		}
+	if len(apprSum.TotTrnsCnt) > 0 && apprSum.compare(approvalSum.ResultSum) != 0 {
+		// DB의 데이터와 수집데이터가 같은 경우, 정상 응답
+		lprintf(4, "[INFO][go-%d] getApproval: db approval sum amt (%v) = (%v) \n", goID, apprSum.TotTrnsAmt, approvalSum.ResultSum.TotTrnsAmt)
+		return approvalSum.ResultSum.TotTrnsCnt, approvalSum.ResultSum.TotTrnsAmt, CcErrSameData, cookie
 	}
+	// DB의 데이터와 새로 수집한 데이터가 다른 경우, 재수집 후 삭제 -> insert
+	lprintf(3, "[INFO][go-%d] DB=%v\n", goID, *apprSum)
+	lprintf(3, "[INFO][go-%d] WEB=%v\n", goID, approvalSum.ResultSum)
+	/*
+			if apprSum.compare(approvalSum.ResultSum) == 0 {
 
+
+
+				// deleteSync(goID, bizNum, bsDt)
+				deleteData(goID, ApprovalTy, bizNum, bsDt)
+			} else {
+				// DB의 데이터와 수집데이터가 같은 경우, 정상 응답
+				lprintf(4, "[INFO][go-%d] getApproval: db approval sum amt (%v) = (%v) \n", goID, apprSum.TotTrnsAmt, approvalSum.ResultSum.TotTrnsAmt)
+				return approvalSum.ResultSum.TotTrnsCnt, approvalSum.ResultSum.TotTrnsAmt, CcErrSameData, cookie
+			}
+		}
+	*/
 	tranCnt, err := strconv.Atoi(approvalSum.ResultSum.TotTrnsCnt)
 	if err != nil {
 		lprintf(1, "[ERROR][go-%d] getApproval: data format (approvalSum.ResultSum.TotTrnsCnt:%s)", goID, approvalSum.ResultSum.TotTrnsCnt)
@@ -679,7 +710,8 @@ func getApprovalDetail(goID int, cookie []*http.Cookie, bsDt, address string, co
 	}
 	lprintf(4, "[INFO][go-%d] getApprovalDetail: resp approval detail (%s:%d건)(%v) \n", goID, bizNum, len(approvalDetailList), approvalDetailList)
 
-	// 승인내역 상세 리스트 DB저장
+	// 승인내역 상세 리스트 기존것 삭제 후 DB저장
+	deleteData(goID, ApprovalTy, bizNum, bsDt)
 	var sumAmt int
 	for _, approvalDetail := range approvalDetailList {
 		// 취소건일 경우 원거래의 상태를 취소로 변경
@@ -791,21 +823,27 @@ func getPurchase(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 		return "", "", CcErrDb, cookie
 	}
 	lprintf(4, "[INFO][go-%d] getPurchase: db purchase sum (%v) \n", goID, pcaSum)
-	if len(pcaSum.PcaCnt) > 0 {
-		if pcaSum.compare(purchaseSum.ResultSum) == 0 {
-			// DB의 데이터와 수집데이터가 다른 경우, 삭제 후 재수집
-			lprintf(4, "[INFO][go-%d] DB=%v\n", goID, *pcaSum)
-			lprintf(4, "[INFO][go-%d] WEB=%v\n", goID, purchaseSum.ResultSum)
-
-			// deleteSync(goID, bizNum, bsDt)
-			deleteData(goID, PurchaseTy, bizNum, bsDt)
-		} else {
-			// DB의 데이터와 수집데이터가 같은 경우, 정상 응답
-			lprintf(4, "[INFO][go-%d] getPurchase: db purchase sum same (%v) \n", goID, pcaSum)
-			return purchaseSum.ResultSum.PcaCnt, purchaseSum.ResultSum.PcaScdAmt, CcErrSameData, cookie
-		}
+	if len(pcaSum.PcaCnt) > 0 && pcaSum.compare(purchaseSum.ResultSum) != 0 {
+		// DB의 데이터와 수집데이터가 같은 경우, 정상 응답
+		lprintf(4, "[INFO][go-%d] getPurchase: db purchase sum same (%v) \n", goID, pcaSum)
+		return purchaseSum.ResultSum.PcaCnt, purchaseSum.ResultSum.PcaScdAmt, CcErrSameData, cookie
 	}
+	// DB의 데이터와 수집데이터가 다른 경우, 삭제 후 재수집
+	lprintf(4, "[INFO][go-%d] DB=%v\n", goID, *pcaSum)
+	lprintf(4, "[INFO][go-%d] WEB=%v\n", goID, purchaseSum.ResultSum)
+	/*
+			if pcaSum.compare(purchaseSum.ResultSum) == 0 {
 
+
+				// deleteSync(goID, bizNum, bsDt)
+				deleteData(goID, PurchaseTy, bizNum, bsDt)
+			} else {
+				// DB의 데이터와 수집데이터가 같은 경우, 정상 응답
+				lprintf(4, "[INFO][go-%d] getPurchase: db purchase sum same (%v) \n", goID, pcaSum)
+				return purchaseSum.ResultSum.PcaCnt, purchaseSum.ResultSum.PcaScdAmt, CcErrSameData, cookie
+			}
+		}
+	*/
 	cnt, err := strconv.Atoi(purchaseSum.ResultSum.PcaCnt)
 	if err != nil {
 		lprintf(1, "[ERROR][go-%d] getPurchase: data format (purchaseSum.ResultSum.PcaCnt:%s) \n", goID, purchaseSum.ResultSum.PcaCnt)
@@ -960,7 +998,8 @@ func getPurchaseDetail(goID int, cookie []*http.Cookie, bsDt, address string, co
 	}
 	lprintf(4, "[INFO][go-%d] getPurchaseDetail: resp purchase detail (%s:%d건)(%v) \n", goID, bizNum, len(purchaseDetailList), purchaseDetailList)
 
-	// 매입내역 상세 리스트 DB저장
+	// 매입내역 상세 리스트 기존 내용 삭제 후 DB저장
+	deleteData(goID, PurchaseTy, bizNum, bsDt)
 	var pcaSum int
 	for _, purchaseDetail := range purchaseDetailList {
 		tmpAmt, err := strconv.Atoi(purchaseDetail.PcaAmt)
@@ -1076,22 +1115,30 @@ func getPayment(goID int, cookie []*http.Cookie, startDate, endDate, grpId strin
 				return "", "", CcErrDb, cookie
 			}
 
-			if len(paySum.PcaCnt) > 0 {
-				lprintf(4, "[INFO][go-%d] getPayment: db payment sum (%v) \n", goID, paySum)
-				if paySum.compare(pay) == 0 {
-					// DB의 데이터와 수집데이터가 다른 경우, 삭제 후 재수집
-					lprintf(4, "[INFO][go-%d] DB=%v\n", goID, *paySum)
-					lprintf(4, "[INFO][go-%d] WEB=%v\n", goID, pay)
-
-					// deleteSync(goID, bizNum, startDate)
-					deleteData(goID, PaymentTy, bizNum, startDate)
-				} else {
-					// DB의 데이터와 수집데이터가 같은 경우, 정상 응답
-					lprintf(4, "[INFO][go-%d] getPayment: db Payment sum same (%v) \n", goID, paymentList.PayAmt)
-					return paymentList.PcaCnt, paymentList.PayAmt, CcErrSameData, cookie
-				}
+			if len(paySum.PcaCnt) > 0 && paySum.compare(pay) != 0 {
+				// DB의 데이터와 수집데이터가 같은 경우, 정상 응답
+				lprintf(4, "[INFO][go-%d] getPayment: db Payment sum same (%v) \n", goID, paymentList.PayAmt)
+				return paymentList.PcaCnt, paymentList.PayAmt, CcErrSameData, cookie
 			}
+			// DB의 데이터와 수집데이터가 다른 경우, 삭제 후 재수집
+			lprintf(4, "[INFO][go-%d] DB=%v\n", goID, *paySum)
+			lprintf(4, "[INFO][go-%d] WEB=%v\n", goID, pay)
+			/*
+					lprintf(4, "[INFO][go-%d] getPayment: db payment sum (%v) \n", goID, paySum)
+					if paySum.compare(pay) == 0 {
+						// DB의 데이터와 수집데이터가 다른 경우, 삭제 후 재수집
+						lprintf(4, "[INFO][go-%d] DB=%v\n", goID, *paySum)
+						lprintf(4, "[INFO][go-%d] WEB=%v\n", goID, pay)
 
+						// deleteSync(goID, bizNum, startDate)
+						deleteData(goID, PaymentTy, bizNum, startDate)
+					} else {
+						// DB의 데이터와 수집데이터가 같은 경우, 정상 응답
+						lprintf(4, "[INFO][go-%d] getPayment: db Payment sum same (%v) \n", goID, paymentList.PayAmt)
+						return paymentList.PcaCnt, paymentList.PayAmt, CcErrSameData, cookie
+					}
+				}
+			*/
 			// 입금내역 합계 리스트 DB저장
 			paramStr := make([]string, 0, 5)
 			paramStr = append(paramStr, bizNum)
@@ -1106,7 +1153,7 @@ func getPayment(goID int, cookie []*http.Cookie, startDate, endDate, grpId strin
 		// detail
 		pageNo := 1
 		address = address + stdDateArray + amt + tcnt + "&q.dataPerPage=" + strconv.Itoa(datePerPage)
-		detailCnt, detailAmt, errCd, newCookie := getPaymentDetail(goID, cookie, address, comp, pageNo)
+		detailCnt, detailAmt, errCd, newCookie := getPaymentDetail(goID, cookie, address, comp, pageNo, startDate)
 		cookie = newCookie
 		if errCd != CcErrNo {
 			// lprintf(1, "[ERROR][go-%d] getPayment: failed to get detail list \n", goID)
@@ -1131,7 +1178,7 @@ func getPayment(goID int, cookie []*http.Cookie, startDate, endDate, grpId strin
 }
 
 // 입금내역 상세 리스트
-func getPaymentDetail(goID int, cookie []*http.Cookie, address string, comp CompInfoType, pageNo int) (payCnt, payAmt int, errCd string, ncookie []*http.Cookie) {
+func getPaymentDetail(goID int, cookie []*http.Cookie, address string, comp CompInfoType, pageNo int, startDate string) (payCnt, payAmt int, errCd string, ncookie []*http.Cookie) {
 	addressAndPage := address + "&currentPage=" + strconv.Itoa(pageNo)
 	referer := "https://www.cardsales.or.kr/page/purchase/day"
 	respData, err, newCookie := reqHttpLoginAgain(goID, cookie, addressAndPage, referer, comp)
@@ -1162,7 +1209,8 @@ func getPaymentDetail(goID int, cookie []*http.Cookie, address string, comp Comp
 	}
 	lprintf(4, "[INFO][go-%d] getPaymentDetail: resp payment details (%s:%d건)(%v) \n", goID, bizNum, len(paymentDetail), paymentDetail)
 
-	// 입금내역 상세 리스트 DB저장
+	// 입금내역 상세 리스트 삭제 후 DB저장
+	deleteData(goID, PaymentTy, bizNum, startDate)
 	var detailCnt, detailAmt int
 	for _, detailList := range paymentDetail {
 		tmpCnt, err := strconv.Atoi(detailList.PcaCnt)
@@ -1193,7 +1241,7 @@ func getPaymentDetail(goID int, cookie []*http.Cookie, address string, comp Comp
 	if totalCnt, err := strconv.Atoi(paymentDetail[0].TotalCnt); err == nil {
 		if (pageNo * datePerPage) < totalCnt {
 			pageNo++
-			cnt, amt, errCd, newCookie := getPaymentDetail(goID, cookie, address, comp, pageNo)
+			cnt, amt, errCd, newCookie := getPaymentDetail(goID, cookie, address, comp, pageNo, startDate)
 			cookie = newCookie
 			if errCd != CcErrNo {
 				// lprintf(1, "[ERROR][go-%d] getPaymentDetail: failed to get detail list \n", goID)

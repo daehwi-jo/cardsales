@@ -191,9 +191,12 @@ func insertSync(goID int, syncData SyncInfoType) int {
 		syncData.PayAmt == syncInfo.PayAmt && syncData.PayCnt == syncInfo.PayCnt &&
 		syncData.PcaAmt == syncInfo.PcaAmt && syncData.PcaCnt == syncInfo.PcaCnt &&
 		syncData.ErrCd == syncInfo.ErrCd {
-		lprintf(4, "[INFO][go-%d] result success but nothing change (%v) \n", goID, syncInfo)
+		lprintf(4, "[INFO][go-%d] result success but there is not any change (%v) \n", goID, syncInfo)
 		return 0
-
+	} else if syncData.ErrCd != "0000" && syncInfo.ErrCd == "0000" {
+		// 정상이였던 데이터를 재수집 하다가 에러가 난 경우 sync update 안함
+		lprintf(4, "[INFO][go-%d] result fail but earlier result was success -> do not change (%v) \n", goID, syncInfo)
+		return -1
 	} else {
 		var params2 []interface{}
 		for k := 0; k < elements.NumField(); k++ {
