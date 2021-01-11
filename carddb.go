@@ -693,7 +693,7 @@ func updatePushState(goID int, bizNum, sendDt string) {
 
 	row, err := cls.QueryDB(query)
 	if err != nil {
-		sendChannel("PUSH 쿼리 에러", "push save query error ["+sendDt+"]")
+		sendChannel("PUSH 쿼리 에러", "push save query error ["+sendDt+"]", "655403")
 		cls.Lprintf(1, "[error][go-%d] %s\n", goID, err.Error())
 		return
 	}

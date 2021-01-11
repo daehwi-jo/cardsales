@@ -329,7 +329,8 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 
 		var result, erridx int
 		if result, erridx = getSalesData(dateList, goID, comp, grpIds[0].Code, cookie, sendDt); result == ERROR {
-			time.Sleep(30 * time.Second)
+			// 2초만 휴식 빠르게 재시도 후 다음 기회를 노리자
+			time.Sleep(2 * time.Second)
 			result, _ = getSalesData(dateList[erridx:], goID, comp, grpIds[0].Code, cookie, sendDt)
 
 		}
@@ -364,11 +365,12 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 	if retryType == NEW {
 		if retCnt > 0 {
 			errMsg := fmt.Sprintf("[%s] 신규 가입자 매출데이터 수집 성공 : restID (%s)", serID, restID)
-			sendChannel("신규 가맹점 수집 성공", errMsg)
+			sendChannel("신규 가맹점 수집 성공", errMsg, "655095")
 		} else {
 			errMsg := fmt.Sprintf("[%s] 신규 가입자 매출데이터 수집 실패 : restID (%s)", serID, restID)
-			sendChannel("신규 가맹점 수집 실패 발생", errMsg)
-			time.Sleep(30 * time.Second)
+			sendChannel("신규 가맹점 수집 실패 발생", errMsg, "655095")
+			// 신규 가맹점 30초 후에 재시도 (NEW 가 아니므로 한번만 재시도 함.)
+			time.Sleep(60 * time.Second)
 			collect(MON, restID, "", POD)
 		}
 	}
@@ -397,10 +399,10 @@ func callChannel() {
 
 	if sumCnt == len(compInfors) && retCnt > 0 {
 		errMsg := fmt.Sprintf("[%s]매출데이터 수집 성공/전체 (%d/%d store)", serID, sumCnt, len(compInfors))
-		sendChannel("전체 가맹점 수집 성공", errMsg)
+		sendChannel("전체 가맹점 수집 성공", errMsg, "655403")
 	} else {
 		errMsg := fmt.Sprintf("[%s]매출데이터 수집 실패 실패 가맹점 수 (%d store)", serID, len(compInfors)-sumCnt)
-		sendChannel("수집 실패 가맹점 발생", errMsg)
+		sendChannel("수집 실패 가맹점 발생", errMsg, "655403")
 	}
 }
 
@@ -1298,7 +1300,7 @@ func reqHttpLoginAgain(goID int, cookie []*http.Cookie, address, referer string,
 
 	// send request
 	client := &http.Client{
-		Timeout: time.Second * 20,
+		Timeout: time.Second * 10,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
@@ -1317,7 +1319,7 @@ func reqHttpLoginAgain(goID int, cookie []*http.Cookie, address, referer string,
 	if respData.StatusCode == 302 {
 		lprintf(4, "[INFO][go-%d] login out=(%s) \n", goID, respData)
 		respData.Body.Close()
-		time.Sleep(3000 * time.Millisecond)
+		time.Sleep(1000 * time.Millisecond)
 		resp, err := login(goID, comp.LnID, comp.LnPsw)
 		if err != nil {
 			lprintf(1, "[ERROR][go-%d] login again error=(%s) \n", goID, err)
@@ -1355,7 +1357,7 @@ func reqHttp(goID int, cookie []*http.Cookie, address, referer string, comp Comp
 
 	// send request
 	client := &http.Client{
-		Timeout: time.Second * 20,
+		Timeout: time.Second * 10,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,

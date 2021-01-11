@@ -6,10 +6,11 @@ import (
 	"strings"
 )
 
-func sendChannel(title, msg string) {
-	body := `{ "conversation_id": 655403, "text": "캐시컴바인 알림",	"blocks": [ { "type": "header",	"text": "${TITLE}", "style": "blue" },  { "type": "text", "text": "${MSG}", "markdown": true } ] }`
+func sendChannel(title, msg, roomNumber string) {
+	body := `{ "conversation_id": ${ROOM}, "text": "캐시컴바인 알림",	"blocks": [ { "type": "header",	"text": "${TITLE}", "style": "blue" },  { "type": "text", "text": "${MSG}", "markdown": true } ] }`
 	body = strings.Replace(body, "${TITLE}", title, -1)
 	body = strings.Replace(body, "${MSG}", msg, -1)
+	body = strings.Replace(body, "${ROOM}", roomNumber, -1)
 
 	urlStr := "https://api.kakaowork.com/v1/messages.send?Content-Type=application/json"
 	lprintf(4, "[INFO][go] url str(%s) \n", urlStr)
