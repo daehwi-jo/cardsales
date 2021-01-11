@@ -329,7 +329,7 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 
 		var result, erridx int
 		if result, erridx = getSalesData(dateList, goID, comp, grpIds[0].Code, cookie, sendDt); result == ERROR {
-			time.Sleep(1 * time.Minute)
+			time.Sleep(30 * time.Second)
 			result, _ = getSalesData(dateList[erridx:], goID, comp, grpIds[0].Code, cookie, sendDt)
 
 		}
@@ -339,7 +339,7 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 			continue // return
 		}
 
-		// 주기 호출인 경우만 가맹점 Push, 신규 가맹점만 file create
+		// 주기 호출인 경우, 오늘자 조회 성공이 면 가맹점 Push
 		if retryType == POD && searchTy == ONE {
 			// 가맹점 push
 			ok := checkPushState(goID, comp.BizNum, bsDt)
@@ -349,12 +349,6 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 				pushURI := "DaRaYo/api/common/commonPush.json?userId=" + comp.BizNum + "&userTy=5&msgCode=5002"
 				cls.HttpRequest("HTTP", "GET", "api.darayo.com", "80", pushURI, true)
 			}
-		} else if retryType == NEW {
-			// 금결원 파일생성 주기적인 결과는 금결원에 보내기 전에 그날 변경된 내역을 전부 종합해서 보내는 것이 좋을 것 같음
-			// 신규 가입자만 신호를 보내 전송할 파일을 만들고 익일 주기 데이터 전송시 함께 보냄
-			lprintf(4, "[INFO][go-%d] make kftc file:(%s) \n", goID, comp.BizNum)
-			makeURI := "CashCombine/v1/csv/makeKftcData.json?bizNum=" + comp.BizNum + "&bsDt=" + bsDt + "&stDt=" + dateList[0]
-			cls.HttpRequest("HTTP", "POST", "49.50.172.227", "7180", makeURI, true)
 		}
 
 		if comp.LnFirstYn == "N" {
@@ -374,6 +368,8 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 		} else {
 			errMsg := fmt.Sprintf("[%s] 신규 가입자 매출데이터 수집 실패 : restID (%s)", serID, restID)
 			sendChannel("신규 가맹점 수집 실패 발생", errMsg)
+			time.Sleep(30 * time.Second)
+			collect(MON, restID, "", POD)
 		}
 	}
 
@@ -593,6 +589,7 @@ func getApproval(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 			}
 		}
 	*/
+
 	tranCnt, err := strconv.Atoi(approvalSum.ResultSum.TotTrnsCnt)
 	if err != nil {
 		lprintf(1, "[ERROR][go-%d] getApproval: data format (approvalSum.ResultSum.TotTrnsCnt:%s)", goID, approvalSum.ResultSum.TotTrnsCnt)
@@ -603,30 +600,16 @@ func getApproval(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 		paramStr := make([]string, 0, 5)
 		paramStr = append(paramStr, bizNum)
 		paramStr = append(paramStr, strings.ReplaceAll(bsDt, "-", ""))
-		row := insertData(goID, ApprovalSum, paramStr, &approvalSum.ResultSum)
-		if row < 0 {
-			lprintf(1, "[ERROR][go-%d] getApproval: sum failed to store DB \n", goID)
-			return "", "", CcErrDb, cookie
-		}
 
-		// 승인내역 합계 리스트
 		var cardCoUri, amtUri, tcntUri string
-		address = "https://www.cardsales.or.kr/page/api/approval/detailDayListAjax?q.mode=&q.flag=&q.merGrpId=" + grpId + "&q.cardCo=&q.merNo=&q.stdDate=" + bsDt
+		// 승인내역 합계 리스트
 		for _, approvalList := range approvalSum.ResultList {
 			cardCoUri = cardCoUri + "&q.cardCoArray=" + approvalList.CardCo
 			amtUri = amtUri + "&amt=" + approvalList.TrnsAmt
 			tcntUri = tcntUri + "&tcnt=" + approvalList.TrnsCnt
-
-			// 승인내역 합계 리스트 DB저장
-			paramStr := make([]string, 0, 5)
-			paramStr = append(paramStr, bizNum)
-			paramStr = append(paramStr, strings.ReplaceAll(bsDt, "-", ""))
-			row := insertData(goID, ApprovalList, paramStr, &approvalList)
-			if row < 0 {
-				lprintf(1, "[ERROR][go-%d] getApproval: sum list failed to store DB \n", goID)
-				return "", "", CcErrDb, cookie
-			}
 		}
+		address = "https://www.cardsales.or.kr/page/api/approval/detailDayListAjax?q.mode=&q.flag=&q.merGrpId=" + grpId + "&q.cardCo=&q.merNo=&q.stdDate=" + bsDt
+
 		// detail
 		loopCnt := tranCnt / datePerPage
 		if len(approvalSum.ResultList)%datePerPage != 0 {
@@ -646,6 +629,26 @@ func getApproval(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 
 			detailCnt += cnt
 			detailAmt += amt
+		}
+
+		// detail 저장 후 DB 저장 (detail 새로 저장시 기존거 지움)
+		row := insertData(goID, ApprovalSum, paramStr, &approvalSum.ResultSum)
+		if row < 0 {
+			lprintf(1, "[ERROR][go-%d] getApproval: sum failed to store DB \n", goID)
+			return "", "", CcErrDb, cookie
+		}
+
+		for _, approvalList := range approvalSum.ResultList {
+
+			// 승인내역 합계 리스트 DB저장
+			paramStr := make([]string, 0, 5)
+			paramStr = append(paramStr, bizNum)
+			paramStr = append(paramStr, strings.ReplaceAll(bsDt, "-", ""))
+			row := insertData(goID, ApprovalList, paramStr, &approvalList)
+			if row < 0 {
+				lprintf(1, "[ERROR][go-%d] getApproval: sum list failed to store DB \n", goID)
+				return "", "", CcErrDb, cookie
+			}
 		}
 
 		// 취소건 원거래일자 업데이트
@@ -866,11 +869,6 @@ func getPurchase(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 		paramStr := make([]string, 0, 5)
 		paramStr = append(paramStr, bizNum)
 		paramStr = append(paramStr, strings.ReplaceAll(bsDt, "-", ""))
-		row := insertData(goID, PurchaseSum, paramStr, &purchaseSum.ResultSum)
-		if row < 0 {
-			lprintf(1, "[ERROR][go-%d] getPurchase: Sum failed to store DB \n", goID)
-			return "", "", CcErrDb, cookie
-		}
 
 		// 합계 상세조회
 		tagBody := doc.Find("div.table_cell_body").Find("#tbodyMain")
@@ -916,16 +914,6 @@ func getPurchase(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 			tcntUri = tcntUri + "&tcnt=" + purchaseList.PcaCnt
 			chkArrUri = chkArrUri + "&q.chkArr=" + purchaseList.CardCo
 			//&q.dataPerPage=20&q.chkArr=04&q.chkArr=13&q.chkArr=03&q.chkArr=21&q.chkArr=12&currentPage=1
-
-			// 매입내역 합계 리스트 DB저장
-			paramStr := make([]string, 0, 5)
-			paramStr = append(paramStr, bizNum)
-			paramStr = append(paramStr, strings.ReplaceAll(bsDt, "-", ""))
-			row := insertData(goID, PurchaseList, paramStr, &purchaseList)
-			if row < 0 {
-				lprintf(1, "[ERROR][go-%d] getPurchase: sum list failed to store DB \n", goID)
-				return "", "", CcErrDb, cookie
-			}
 		}
 
 		// detail
@@ -953,6 +941,25 @@ func getPurchase(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 
 			detailCnt += cnt
 			detailAmt += amt
+		}
+
+		// DB 저장
+		row := insertData(goID, PurchaseSum, paramStr, &purchaseSum.ResultSum)
+		if row < 0 {
+			lprintf(1, "[ERROR][go-%d] getPurchase: Sum failed to store DB \n", goID)
+			return "", "", CcErrDb, cookie
+		}
+
+		for _, purchaseList := range purchaseSum.ResultList {
+			// 매입내역 합계 리스트 DB저장
+			paramStr := make([]string, 0, 5)
+			paramStr = append(paramStr, bizNum)
+			paramStr = append(paramStr, strings.ReplaceAll(bsDt, "-", ""))
+			row := insertData(goID, PurchaseList, paramStr, &purchaseList)
+			if row < 0 {
+				lprintf(1, "[ERROR][go-%d] getPurchase: sum list failed to store DB \n", goID)
+				return "", "", CcErrDb, cookie
+			}
 		}
 
 		// 합계, 상세내역 비교
@@ -1150,15 +1157,7 @@ func getPayment(goID int, cookie []*http.Cookie, startDate, endDate, grpId strin
 					}
 				}
 			*/
-			// 입금내역 합계 리스트 DB저장
-			paramStr := make([]string, 0, 5)
-			paramStr = append(paramStr, bizNum)
-			paramStr = append(paramStr, strings.ReplaceAll(paymentList.PayDt, "-", ""))
-			row := insertData(goID, PaymentList, paramStr, &paymentList)
-			if row < 0 {
-				lprintf(1, "[ERROR][go-%d] getPayment: sum list failed to store DB \n", goID)
-				return "", "", CcErrDb, cookie
-			}
+
 		}
 
 		// detail
@@ -1169,6 +1168,18 @@ func getPayment(goID int, cookie []*http.Cookie, startDate, endDate, grpId strin
 		if errCd != CcErrNo {
 			// lprintf(1, "[ERROR][go-%d] getPayment: failed to get detail list \n", goID)
 			return "", "", errCd, cookie
+		}
+
+		// 입금내역 합계 리스트 DB저장
+		for _, paymentList := range paymentSum.ResultList {
+			paramStr := make([]string, 0, 5)
+			paramStr = append(paramStr, bizNum)
+			paramStr = append(paramStr, strings.ReplaceAll(paymentList.PayDt, "-", ""))
+			row := insertData(goID, PaymentList, paramStr, &paymentList)
+			if row < 0 {
+				lprintf(1, "[ERROR][go-%d] getPayment: sum list failed to store DB \n", goID)
+				return "", "", CcErrDb, cookie
+			}
 		}
 
 		// 합계, 상세내역 비교
@@ -1282,6 +1293,7 @@ func reqHttpLoginAgain(goID int, cookie []*http.Cookie, address, referer string,
 	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 	req.Header.Set("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
 	req.Header.Set("Cache-Control", "max-age=0")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
 	req.Header.Set("Referer", referer)
 
 	// send request
@@ -1338,6 +1350,7 @@ func reqHttp(goID int, cookie []*http.Cookie, address, referer string, comp Comp
 	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 	req.Header.Set("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
 	req.Header.Set("Cache-Control", "max-age=0")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
 	req.Header.Set("Referer", referer)
 
 	// send request
