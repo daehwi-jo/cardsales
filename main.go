@@ -304,6 +304,10 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 			}
 		}
 		lprintf(4, "[INFO][go-%d] search dateList (%v)\n", goID, dateList)
+		if len(dateList) == 0 {
+			lprintf(4, "[INFO][go-%d] today collect success already (%s)\n", goID, comp.BizNum)
+			continue
+		}
 		// login
 		resp, err := login(goID, comp.LnID, comp.LnPsw)
 		if err != nil {
