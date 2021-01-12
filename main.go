@@ -366,8 +366,9 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 	//	wg.Wait()
 
 	sumCnt, retCnt := getResultCnt(bsDt, restID, serID)
+	// 신규 수집인 경우 에도 카카오 워크에 알림이 좋을 것 같음
 	if retryType == NEW {
-		if retCnt > 0 {
+		if sumCnt > 0 {
 			errMsg := fmt.Sprintf("[%s] 신규 가입자 매출데이터 수집 성공 : restID (%s)", serID, restID)
 			sendChannel("신규 가맹점 수집 성공", errMsg, "655095")
 		} else {
@@ -379,8 +380,6 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 		}
 	}
 
-	// 신규 수집인 경우 에도 카카오 워크에 알림이 좋을 것 같음
-	// if retryType == NEW {}
 	lprintf(4, ">> collect END.... [%d:%s:%s][%d/%d] << \n", searchTy, restID, reqDt, sumCnt, len(compInfors))
 	lprintf(3, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
 
