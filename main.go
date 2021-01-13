@@ -401,10 +401,10 @@ func callChannel() {
 	sumCnt, retCnt := getResultCnt(bsDt, "", serID)
 
 	if sumCnt == len(compInfors) && retCnt > 0 {
-		errMsg := fmt.Sprintf("[%s]매출데이터 수집 성공/전체 (%d/%d store)", serID, sumCnt, len(compInfors))
+		errMsg := fmt.Sprintf("[%s]매출데이터 수집 전체 성공 (%d/%d store)", serID, sumCnt, len(compInfors))
 		sendChannel("전체 가맹점 수집 성공", errMsg, "655403")
 	} else {
-		errMsg := fmt.Sprintf("[%s]매출데이터 수집 실패 실패 가맹점 수 (%d store)", serID, len(compInfors)-sumCnt)
+		errMsg := fmt.Sprintf("[%s]매출데이터 수집 상태 : 실패 (%d store), 성공 (%d store)", serID, len(compInfors)-sumCnt, sumCnt)
 		sendChannel("수집 실패 가맹점 발생", errMsg, "655403")
 	}
 }
@@ -623,11 +623,14 @@ func getApproval(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 		var updateOrgData []ApprovalDetailType
 		var detailCnt, detailAmt int
 		address = address + cardCoUri + amtUri + tcntUri
+		wrtDt := time.Now().Format("20060102130405")
 		for i := 1; i <= loopCnt; i++ {
 			tmpAddr := address + fmt.Sprintf("&q.dataPerPage=%d&currentPage=%d", datePerPage, i)
 			cnt, amt, errCd, newCookie := getApprovalDetail(goID, cookie, bsDt, tmpAddr, comp, &updateOrgData)
 			if errCd != CcErrNo {
 				// lprintf(1, "[ERROR][go-%d] getApproval: failed to get detail list \n", goID)
+				// 오류 시 새로 작성한 데이터 삭제 후 리턴
+				deleteDataAfter(goID, ApprovalTy, bizNum, bsDt, wrtDt)
 				return "", "", errCd, cookie
 			}
 			cookie = newCookie
@@ -635,6 +638,8 @@ func getApproval(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 			detailCnt += cnt
 			detailAmt += amt
 		}
+		// 승인내역 상세 리스트 기존것 삭제 후 DB저장
+		deleteDataBefore(goID, ApprovalTy, bizNum, bsDt, wrtDt)
 
 		// detail 저장 후 DB 저장 (detail 새로 저장시 기존거 지움)
 		row := insertData(goID, ApprovalSum, paramStr, &approvalSum.ResultSum)
@@ -729,8 +734,6 @@ func getApprovalDetail(goID int, cookie []*http.Cookie, bsDt, address string, co
 	}
 	lprintf(4, "[INFO][go-%d] getApprovalDetail: resp approval detail (%s:%d건)(%v) \n", goID, bizNum, len(approvalDetailList), approvalDetailList)
 
-	// 승인내역 상세 리스트 기존것 삭제 후 DB저장
-	deleteData(goID, ApprovalTy, bizNum, bsDt)
 	var sumAmt int
 	for _, approvalDetail := range approvalDetailList {
 		// 취소건일 경우 원거래의 상태를 취소로 변경
@@ -935,12 +938,14 @@ func getPurchase(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 
 		var detailCnt, detailAmt int
 		address = address + chkArrBaseUri + amtUri + tcntUri + chkArrUri
+		wrtDt := time.Now().Format("20060102130405")
 		for i := 1; i <= loopCnt; i++ {
 			tmpAddr := address + fmt.Sprintf("&q.dataPerPage=%d&currentPage=%d", datePerPage, i)
 			cnt, amt, errCd, newCookie := getPurchaseDetail(goID, cookie, bsDt, tmpAddr, comp)
 			cookie = newCookie
 			if errCd != CcErrNo {
 				// lprintf(1, "[ERROR][go-%d] getPurchase: failed to get detail list from DB \n", goID)
+				deleteDataAfter(goID, PurchaseTy, bizNum, bsDt, wrtDt)
 				return "", "", errCd, cookie
 			}
 
@@ -948,6 +953,8 @@ func getPurchase(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 			detailAmt += amt
 		}
 
+		// 매입내역 상세 리스트 기존 내용 삭제 후 DB저장
+		deleteDataBefore(goID, PurchaseTy, bizNum, bsDt, wrtDt)
 		// DB 저장
 		row := insertData(goID, PurchaseSum, paramStr, &purchaseSum.ResultSum)
 		if row < 0 {
@@ -1021,8 +1028,6 @@ func getPurchaseDetail(goID int, cookie []*http.Cookie, bsDt, address string, co
 	}
 	lprintf(4, "[INFO][go-%d] getPurchaseDetail: resp purchase detail (%s:%d건)(%v) \n", goID, bizNum, len(purchaseDetailList), purchaseDetailList)
 
-	// 매입내역 상세 리스트 기존 내용 삭제 후 DB저장
-	deleteData(goID, PurchaseTy, bizNum, bsDt)
 	var pcaSum int
 	for _, purchaseDetail := range purchaseDetailList {
 		tmpAmt, err := strconv.Atoi(purchaseDetail.PcaAmt)
@@ -1111,6 +1116,7 @@ func getPayment(goID int, cookie []*http.Cookie, startDate, endDate, grpId strin
 		// 입금내역 상세 조회
 		var sumCnt, sumAmt int
 		var stdDateArray, amt, tcnt string
+		wrtDt := time.Now().Format("20060102130405")
 		address := "https://www.cardsales.or.kr/page/api/payment/detailTermListAjax?" + "q.mode=&q.flag=&q.stdYear=&q.stdMonth=&q.pageType=" + "&q.merGrpId=" + grpId + "&q.cardCo=&q.merNo=" + "&q.startDate=" + startDate + "&q.endDate=" + endDate
 		for _, paymentList := range paymentSum.ResultList {
 			stdDateArray = stdDateArray + "&q.stdDateArray=" + paymentList.PayDt // 입금 일자
@@ -1172,9 +1178,12 @@ func getPayment(goID int, cookie []*http.Cookie, startDate, endDate, grpId strin
 		cookie = newCookie
 		if errCd != CcErrNo {
 			// lprintf(1, "[ERROR][go-%d] getPayment: failed to get detail list \n", goID)
+			deleteDataAfter(goID, PaymentTy, bizNum, startDate, wrtDt)
 			return "", "", errCd, cookie
 		}
 
+		// 입금내역 상세 리스트 삭제 후 DB저장
+		deleteDataBefore(goID, PaymentTy, bizNum, startDate, wrtDt)
 		// 입금내역 합계 리스트 DB저장
 		for _, paymentList := range paymentSum.ResultList {
 			paramStr := make([]string, 0, 5)
@@ -1236,8 +1245,6 @@ func getPaymentDetail(goID int, cookie []*http.Cookie, address string, comp Comp
 	}
 	lprintf(4, "[INFO][go-%d] getPaymentDetail: resp payment details (%s:%d건)(%v) \n", goID, bizNum, len(paymentDetail), paymentDetail)
 
-	// 입금내역 상세 리스트 삭제 후 DB저장
-	deleteData(goID, PaymentTy, bizNum, startDate)
 	var detailCnt, detailAmt int
 	for _, detailList := range paymentDetail {
 		tmpCnt, err := strconv.Atoi(detailList.PcaCnt)
