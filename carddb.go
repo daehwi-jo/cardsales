@@ -471,27 +471,26 @@ func insertData(goID, queryTy int, paramPtr []string, dataTy interface{}) int {
 }
 
 // 승인/매입/입금 데이터 삭제
-func deleteDataAfter(goID, ty int, bizNum, bsDt, wrtDt string) int {
+func deleteData(goID, ty int, bizNum, bsDt string) int {
 	var statememt []string
 
 	if ty == ApprovalTy {
-		statememt = append(statememt, "delete from cc_aprv_sum where BIZ_NUM=? and BS_DT=? and WRT_DT >= ?;")
-		statememt = append(statememt, "delete from cc_aprv_lst where BIZ_NUM=? and BS_DT=? and WRT_DT >= ?;")
-		statememt = append(statememt, "delete from cc_aprv_dtl where BIZ_NUM=? and BS_DT=? and WRT_DT >= ?;")
+		statememt = append(statememt, "delete from cc_aprv_sum where BIZ_NUM=? and BS_DT=?;")
+		statememt = append(statememt, "delete from cc_aprv_lst where BIZ_NUM=? and BS_DT=?;")
+		statememt = append(statememt, "delete from cc_aprv_dtl where BIZ_NUM=? and BS_DT=?;")
 	} else if ty == PurchaseTy {
-		statememt = append(statememt, "delete from cc_pca_sum where BIZ_NUM=? and BS_DT=? and WRT_DT >= ?;")
-		statememt = append(statememt, "delete from cc_pca_lst where BIZ_NUM=? and BS_DT=? and WRT_DT >= ?;")
-		statememt = append(statememt, "delete from cc_pca_dtl where BIZ_NUM=? and BS_DT=? and WRT_DT >= ?;")
+		statememt = append(statememt, "delete from cc_pca_sum where BIZ_NUM=? and BS_DT=?;")
+		statememt = append(statememt, "delete from cc_pca_lst where BIZ_NUM=? and BS_DT=?;")
+		statememt = append(statememt, "delete from cc_pca_dtl where BIZ_NUM=? and BS_DT=?;")
 	} else {
-		statememt = append(statememt, "delete from cc_pay_lst where BIZ_NUM=? and BS_DT=? and WRT_DT >= ?;")
-		statememt = append(statememt, "delete from cc_pay_dtl where BIZ_NUM=? and BS_DT=? and WRT_DT >= ?;")
+		statememt = append(statememt, "delete from cc_pay_lst where BIZ_NUM=? and BS_DT=?;")
+		statememt = append(statememt, "delete from cc_pay_dtl where BIZ_NUM=? and BS_DT=?;")
 	}
 
 	var ret int
 	var params []interface{}
 	params = append(params, bizNum)
 	params = append(params, bsDt)
-	params = append(params, wrtDt)
 	for _, query := range statememt {
 		// lprintf(4, "[INFO] statement=%s \n", query)
 		cnt, err := cls.ExecDBbyParam(query, params)
@@ -506,27 +505,51 @@ func deleteDataAfter(goID, ty int, bizNum, bsDt, wrtDt string) int {
 }
 
 // 승인/매입/입금 데이터 저장일 기준 이전 것 삭제
-func deleteDataBefore(goID, ty int, bizNum, bsDt, wrtDt string) int {
+func deleteDataTemp(goID, ty int, bizNum, bsDt string) int {
 	var statememt []string
 
 	if ty == ApprovalTy {
-		statememt = append(statememt, "delete from cc_aprv_sum where BIZ_NUM=? and BS_DT=? and WRT_DT < ?;")
-		statememt = append(statememt, "delete from cc_aprv_lst where BIZ_NUM=? and BS_DT=? and WRT_DT < ?;")
-		statememt = append(statememt, "delete from cc_aprv_dtl where BIZ_NUM=? and BS_DT=? and WRT_DT < ?;")
+		statememt = append(statememt, "delete from cc_aprv_dtl_temp where BIZ_NUM=? and BS_DT=?;")
 	} else if ty == PurchaseTy {
-		statememt = append(statememt, "delete from cc_pca_sum where BIZ_NUM=? and BS_DT=? and WRT_DT < ?;")
-		statememt = append(statememt, "delete from cc_pca_lst where BIZ_NUM=? and BS_DT=? and WRT_DT < ?;")
-		statememt = append(statememt, "delete from cc_pca_dtl where BIZ_NUM=? and BS_DT=? and WRT_DT < ?;")
+		statememt = append(statememt, "delete from cc_pca_dtl_temp where BIZ_NUM=? and BS_DT=?;")
 	} else {
-		statememt = append(statememt, "delete from cc_pay_lst where BIZ_NUM=? and BS_DT=? and WRT_DT < ?;")
-		statememt = append(statememt, "delete from cc_pay_dtl where BIZ_NUM=? and BS_DT=? and WRT_DT < ?;")
+		statememt = append(statememt, "delete from cc_pay_dtl_temp where BIZ_NUM=? and BS_DT=?;")
 	}
 
 	var ret int
 	var params []interface{}
 	params = append(params, bizNum)
 	params = append(params, bsDt)
-	params = append(params, wrtDt)
+
+	for _, query := range statememt {
+		// lprintf(4, "[INFO] statement=%s \n", query)
+		cnt, err := cls.ExecDBbyParam(query, params)
+		if err != nil {
+			lprintf(1, "[ERROR][go-%d] cls.ExecDBbyParam error(%s) \n", goID, err.Error())
+			return -1
+		}
+		ret = ret + cnt
+	}
+
+	return ret
+}
+
+// 승인/매입/입금 데이터 삭제
+func moveData(goID, ty int, bizNum, bsDt string) int {
+	var statememt []string
+
+	if ty == ApprovalTy {
+		statememt = append(statememt, "insert into cc_aprv_dtl values select * from cc_aprv_dtl_temp where BIZ_NUM=? and BS_DT=?;")
+	} else if ty == PurchaseTy {
+		statememt = append(statememt, "insert into cc_pca_dtl values select * from cc_pca_dtl_temp where BIZ_NUM=? and BS_DT=?;")
+	} else {
+		statememt = append(statememt, "insert into cc_pay_dtl values select * from cc_pay_dtl_temp where BIZ_NUM=? and BS_DT=?;")
+	}
+
+	var ret int
+	var params []interface{}
+	params = append(params, bizNum)
+	params = append(params, bsDt)
 	for _, query := range statememt {
 		// lprintf(4, "[INFO] statement=%s \n", query)
 		cnt, err := cls.ExecDBbyParam(query, params)
