@@ -539,11 +539,11 @@ func moveData(goID, ty int, bizNum, bsDt string) int {
 	var statememt []string
 
 	if ty == ApprovalTy {
-		statememt = append(statememt, "insert into cc_aprv_dtl values select * from cc_aprv_dtl_temp where BIZ_NUM=? and BS_DT=?;")
+		statememt = append(statememt, "insert into cc_aprv_dtl select * from cc_aprv_dtl_temp where BIZ_NUM=? and BS_DT=?;")
 	} else if ty == PurchaseTy {
-		statememt = append(statememt, "insert into cc_pca_dtl values select * from cc_pca_dtl_temp where BIZ_NUM=? and BS_DT=?;")
+		statememt = append(statememt, "insert into cc_pca_dtl select * from cc_pca_dtl_temp where BIZ_NUM=? and BS_DT=?;")
 	} else {
-		statememt = append(statememt, "insert into cc_pay_dtl values select * from cc_pay_dtl_temp where BIZ_NUM=? and BS_DT=?;")
+		statememt = append(statememt, "insert into cc_pay_dtl select * from cc_pay_dtl_temp where BIZ_NUM=? and BS_DT=?;")
 	}
 
 	var ret int
