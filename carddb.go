@@ -394,7 +394,7 @@ func insertData(goID, queryTy int, paramPtr []string, dataTy interface{}) int {
 		inserts = append(inserts, "?")
 		paramPtr = append(paramPtr, time.Now().Format("20060102150405"))
 
-		statement = "insert into cc_aprv_dtl (" +
+		statement = "insert into cc_aprv_dtl_temp (" +
 			strings.Join(fields, ", ") +
 			") values (" + strings.Join(inserts, ", ") + ")"
 
@@ -427,7 +427,7 @@ func insertData(goID, queryTy int, paramPtr []string, dataTy interface{}) int {
 		inserts = append(inserts, "?")
 		paramPtr = append(paramPtr, time.Now().Format("20060102150405"))
 
-		statement = "insert into cc_pca_dtl (" +
+		statement = "insert into cc_pca_dtl_temp (" +
 			strings.Join(fields, ", ") +
 			") values (" + strings.Join(inserts, ", ") + ")"
 
@@ -448,7 +448,7 @@ func insertData(goID, queryTy int, paramPtr []string, dataTy interface{}) int {
 		inserts = append(inserts, "?")
 		paramPtr = append(paramPtr, time.Now().Format("20060102150405"))
 
-		statement = "insert into cc_pay_dtl (" +
+		statement = "insert into cc_pay_dtl_temp (" +
 			strings.Join(fields, ", ") +
 			") values (" + strings.Join(inserts, ", ") + ")"
 
