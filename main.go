@@ -649,6 +649,13 @@ func getApproval(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 			return "", "", CcErrDb, cookie
 		}
 
+		// 통계용 월간 승인 내역 저장
+		row = insertMonthData(goID, bizNum, bsDt)
+		if row < 0 {
+			lprintf(1, "[ERROR][go-%d] getApproval: month sum failed to store DB \n", goID)
+			return "", "", CcErrDb, cookie
+		}
+
 		for _, approvalList := range approvalSum.ResultList {
 
 			// 승인내역 합계 리스트 DB저장

@@ -335,6 +335,50 @@ func selectPaySum(goID int, bizNum, bsDt string) *PaymentResultListType {
 }
 
 // 승인/매입/입금 데이터 Insert Query 생성 & 실행
+func insertMonthData(goID int, bizNum, bsDt string) int {
+	delQuery := "delete from cc_aprv_sum_month where biz_num = " + bizNum + "and bs_dt =" + bsDt[:6] + ";"
+	insQuery := "insert into cc_aprv_sum_month (`BIZ_NUM`,`BS_DT`,`TOT_CNT`,`TOT_AMT`,`APRV_CNT`,`APRV_AMT`,`CAN_CNT`,`CAN_AMT`,`WRT_DT`) "
+	insQuery += "select biz_num, left(bs_dt, 6), sum(tot_cnt), sum(tot_amt), sum(aprv_cnt), sum(aprv_amt), sum(can_cnt), sum(can_amt), '" + bsDt + "' "
+	insQuery += "from cc_aprv_sum where biz_num = '" + bizNum + "' and left(bs_dt, 6) = '" + bsDt[0:6] + "' group by left(bs_dt, 6), biz_num"
+
+	// transation begin
+	tx, err := cls.DBc.Begin()
+	if err != nil {
+		return -1
+	}
+
+	// 오류 처리
+	defer func() {
+		if err != nil {
+			// transaction rollback
+			lprintf(1, "[ERROR][go-%d] month insert do rollback \n")
+			tx.Rollback()
+		}
+	}()
+
+	// transation exec
+	_, err = tx.Exec(delQuery)
+	if err != nil {
+		lprintf(1, "[ERROR][go-%d] del Query(%s) -> error (%s) \n", goID, delQuery, err)
+		return -2
+	}
+	// transation exec
+	_, err = tx.Exec(insQuery)
+	if err != nil {
+		lprintf(1, "[ERROR][go-%d] ins Query(%s) -> error (%s) \n", goID, delQuery, err)
+		return -2
+	}
+
+	// transaction commit
+	err = tx.Commit()
+	if err != nil {
+		lprintf(1, "[ERROR][go-%d] insert month Query commit error (%s) \n", goID, err)
+		return -3
+	}
+	return 0
+}
+
+// 승인/매입/입금 데이터 Insert Query 생성 & 실행
 func insertData(goID, queryTy int, paramPtr []string, dataTy interface{}) int {
 
 	var statement string
