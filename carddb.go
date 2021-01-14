@@ -443,7 +443,7 @@ func insertData(goID, queryTy int, paramPtr []string, dataTy interface{}) int {
 		if week == 0 || week == 6 {
 			weekend = "HD"
 		}
-		fields = append(fields, "WEEKEND")
+		fields = append(fields, "WEEK_END")
 		inserts = append(inserts, "?")
 		paramPtr = append(paramPtr, weekend)
 
