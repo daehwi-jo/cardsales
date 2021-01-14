@@ -336,7 +336,7 @@ func selectPaySum(goID int, bizNum, bsDt string) *PaymentResultListType {
 
 // 승인/매입/입금 데이터 Insert Query 생성 & 실행
 func insertMonthData(goID int, bizNum, bsDt string) int {
-	delQuery := "delete from cc_aprv_sum_month where biz_num = " + bizNum + "and bs_dt ='" + bsDt[:6] + "';"
+	delQuery := "delete from cc_aprv_sum_month where biz_num = '" + bizNum + "' and bs_dt ='" + bsDt[:6] + "';"
 	insQuery := "insert into cc_aprv_sum_month (`BIZ_NUM`,`BS_DT`,`TOT_CNT`,`TOT_AMT`,`APRV_CNT`,`APRV_AMT`,`CAN_CNT`,`CAN_AMT`,`WRT_DT`) "
 	insQuery += "select biz_num, left(bs_dt, 6), sum(tot_cnt), sum(tot_amt), sum(aprv_cnt), sum(aprv_amt), sum(can_cnt), sum(can_amt), '" + bsDt + "' "
 	insQuery += "from cc_aprv_sum where biz_num = '" + bizNum + "' and left(bs_dt, 6) = '" + bsDt[0:6] + "' group by left(bs_dt, 6), biz_num"
