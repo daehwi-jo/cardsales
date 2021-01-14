@@ -438,6 +438,15 @@ func insertData(goID, queryTy int, paramPtr []string, dataTy interface{}) int {
 		inserts = append(inserts, "?")
 		paramPtr = append(paramPtr, time.Now().Format("20060102150405"))
 
+		weekend := "WD"
+		week := time.Now().Weekday()
+		if week == 0 || week == 6 {
+			weekend = "HD"
+		}
+		fields = append(fields, "WEEKEND")
+		inserts = append(inserts, "?")
+		paramPtr = append(paramPtr, weekend)
+
 		statement = "insert into cc_aprv_dtl_temp (" +
 			strings.Join(fields, ", ") +
 			") values (" + strings.Join(inserts, ", ") + ")"
