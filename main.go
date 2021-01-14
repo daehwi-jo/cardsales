@@ -946,7 +946,7 @@ func getPurchase(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 
 		var detailCnt, detailAmt int
 		address = address + chkArrBaseUri + amtUri + tcntUri + chkArrUri
-		deleteDataTemp(goID, ApprovalTy, bizNum, bsDt)
+		deleteDataTemp(goID, PurchaseTy, bizNum, bsDt)
 		for i := 1; i <= loopCnt; i++ {
 			tmpAddr := address + fmt.Sprintf("&q.dataPerPage=%d&currentPage=%d", datePerPage, i)
 			cnt, amt, errCd, newCookie := getPurchaseDetail(goID, cookie, bsDt, tmpAddr, comp)
@@ -1126,7 +1126,7 @@ func getPayment(goID int, cookie []*http.Cookie, startDate, endDate, grpId strin
 		// 입금내역 상세 조회
 		var sumCnt, sumAmt int
 		var stdDateArray, amt, tcnt string
-		deleteDataTemp(goID, ApprovalTy, bizNum, startDate)
+		deleteDataTemp(goID, PurchaseTy, bizNum, startDate)
 		address := "https://www.cardsales.or.kr/page/api/payment/detailTermListAjax?" + "q.mode=&q.flag=&q.stdYear=&q.stdMonth=&q.pageType=" + "&q.merGrpId=" + grpId + "&q.cardCo=&q.merNo=" + "&q.startDate=" + startDate + "&q.endDate=" + endDate
 		for _, paymentList := range paymentSum.ResultList {
 			stdDateArray = stdDateArray + "&q.stdDateArray=" + paymentList.PayDt // 입금 일자
