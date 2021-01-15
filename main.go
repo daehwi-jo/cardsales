@@ -292,11 +292,12 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 					continue // return
 				}
 			} else if searchTy == WEK {
-				// 주간 조회시 오늘 업데이트 또는 인서트 된 것은 제외
+				// 주간 조회시 오늘 업데이트 또는 인서트 되어서 정상 결과를 가진 것은 제외
 				var newDateList []string
 				for _, eachDay := range dateList {
-					if !strings.HasPrefix(syncInfos[eachDay].ModDt, today) &&
-						!strings.HasPrefix(syncInfos[eachDay].RegDt, today) {
+					if syncInfos[eachDay].ErrCd != "0000" ||
+						(!strings.HasPrefix(syncInfos[eachDay].ModDt, today) &&
+							!strings.HasPrefix(syncInfos[eachDay].RegDt, today)) {
 						newDateList = append(newDateList, eachDay)
 					}
 				}
@@ -490,12 +491,8 @@ func login(goID int, loginId, password string) (*LoginResponse, error) {
 
 	if resp.StatusCode != 302 {
 		lprintf(4, "[INFO][go-%d] resp=(%s) \n", goID, resp)
-		if err != nil {
-			lprintf(1, "[ERROR][go-%d] login: %s \n", goID, err.Error())
-		} else {
-			lprintf(1, "[ERROR][go-%d] login: http resp (%d) \n", goID, resp.StatusCode)
-			err = errors.New("login http resp error")
-		}
+		lprintf(1, "[ERROR][go-%d] login: http resp (%d) \n", goID, resp.StatusCode)
+		err = errors.New("login http resp error")
 		return nil, err
 	}
 
@@ -1348,7 +1345,7 @@ func reqHttpLoginAgain(goID int, cookie []*http.Cookie, address, referer string,
 			return nil, err, cookie
 		}
 		cookie = resp.Cookie
-		respData, err = reqHttp(goID, cookie, address, referer, comp)
+		respData, err = reqHttp(goID, cookie, address, referer)
 		if err != nil {
 			lprintf(1, "[ERROR][go-%d] login again and request error =(%s) \n", goID, err)
 			return nil, err, cookie
@@ -1358,7 +1355,7 @@ func reqHttpLoginAgain(goID int, cookie []*http.Cookie, address, referer string,
 	return respData, nil, cookie
 }
 
-func reqHttp(goID int, cookie []*http.Cookie, address, referer string, comp CompInfoType) (*http.Response, error) {
+func reqHttp(goID int, cookie []*http.Cookie, address, referer string) (*http.Response, error) {
 	lprintf(4, "[INFO][go-%d] http NewRequest (%s) \n", goID, address)
 	time.Sleep(1000 * time.Millisecond)
 	req, err := http.NewRequest("GET", address, nil)
@@ -1392,26 +1389,4 @@ func reqHttp(goID int, cookie []*http.Cookie, address, referer string, comp Comp
 		return nil, err
 	}
 	return respData, nil
-}
-
-// 세션 쿠키 합치기, 새로 받은 쿠키에서 기존에 있는건 업뎃, 없으면 append
-func mergeCookie(oldCookie, newCookie []*http.Cookie) []*http.Cookie {
-	ocl := len(oldCookie)
-	ncl := len(newCookie)
-
-	for nci := 0; nci < ncl; nci++ {
-		oci := 0
-		for ; oci < ocl; oci++ {
-			if oldCookie[oci] == newCookie[nci] {
-				oldCookie[oci] = newCookie[nci]
-				break
-			}
-		}
-		// new cookie
-		if oci == ocl {
-			oldCookie = append(oldCookie, newCookie[nci])
-		}
-	}
-
-	return oldCookie
 }
