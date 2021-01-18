@@ -56,6 +56,11 @@ func main() {
 		lprintf(1, "[ERROR] CHANNEL not exist value\n")
 		return
 	}
+	mSchd, r := cls.GetTokenValue("MONSCHED", fname)
+	if r == cls.CONF_ERR {
+		lprintf(1, "[ERROR] CHANNEL not exist value\n")
+		return
+	}
 	cSchd, r := cls.GetTokenValue("CHANNEL", fname)
 	if r == cls.CONF_ERR {
 		lprintf(1, "[ERROR] CHANNEL not exist value\n")
@@ -71,18 +76,23 @@ func main() {
 	for _, schedule := range weekSchd {
 		g.Every(1).Day().At(schedule).Do(collect, WEK, "", "", POD)
 	}
+	monSchd := strings.Split(mSchd, ",")
+	for _, schedule := range monSchd {
+		g.Every(1).Day().At(schedule).Do(collect, MON, "", "", NEW)
+	}
 	channelSchd := strings.Split(cSchd, ",")
 	for _, schedule := range channelSchd {
 		g.Every(1).Day().At(schedule).Do(callChannel)
 	}
+
 	g.Start()
 	defer g.Clear()
 
-	http.HandleFunc("/newMember", newMember)
 	http.HandleFunc("/reCollects", reCollects)
 	http.HandleFunc("/reCollect", reCollect)
 	http.HandleFunc("/collect", callCollect)
 	http.HandleFunc("/collectweek", weekCollects)
+	http.HandleFunc("/reNewMember", reNewMember)
 
 	// SERVER setting
 	// serIP, r := cls.GetTokenValue("SERVER_IP", fname)
@@ -104,25 +114,23 @@ func main() {
 	}
 }
 
-// 지정가맹점의 이전월 1일부터 전날짜까지 데이터 수집
-// param(필수): restId
-func newMember(w http.ResponseWriter, r *http.Request) {
+func reNewMember(w http.ResponseWriter, r *http.Request) {
 	// restID := r.URL.Query().Get("restId")
 	restID := r.FormValue("restId")
+	bsDt := r.FormValue("bsDt")
 	lprintf(3, ">> newMember START .... [%s] << \n", restID)
-	if len(restID) == 0 {
+	if len(restID) == 0 || len(bsDt) == 0 {
 		lprintf(1, "[ERROR]Required parameter missing\n")
 		http.Error(w, "Required parameter missing", http.StatusBadRequest)
 	} else {
-		ret := collect(MON, restID, "", NEW)
+		ret := collect(MON, restID, bsDt, NEW)
 		if ret <= 0 {
-			// fmt.Fprintln(w, "{\"code\":\"", http.StatusBadRequest, "\",\"cnt\":\"", ret, "\"}")
 			fmt.Fprintf(w, "{\"code\":\"%d\",\"cnt\":\"%d\"}\n", http.StatusBadRequest, ret)
 		} else {
-			// fmt.Fprintln(w, "{\"code\":\"", http.StatusOK, "\",\"cnt\":\"", ret, "\"}")
 			fmt.Fprintf(w, "{\"code\":\"%d\",\"cnt\":\"%d\"}\n", http.StatusOK, ret)
 		}
 	}
+
 	lprintf(3, ">> newMember END .... [%s] << \n", restID)
 }
 
@@ -232,15 +240,29 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 	// 데이터를 수집할 가맹점정보 가져오기
 	var compInfors []CompInfoType
 	if len(restID) == 0 {
-		compInfors = getCompInfos(serID, bsDt)
+		if retryType == NEW {
+			// 신규 가맹점 수집인 경우는 오늘 가입한 가맹점만 돈다.
+			compInfors = getCompInfosNew(serID, bsDt, today)
+		} else {
+			// 기존 가맹점 수집
+			compInfors = getCompInfos(serID, bsDt)
+		}
+
 		if len(compInfors) == 0 {
-			lprintf(4, "[INFO] getCompInfo: not found compony info \n")
+			lprintf(4, "[INFO] getCompInfo: not found company info \n")
 			return -2
 		}
 	} else {
-		compInfors = getCompInfosByRestID(restID, bsDt)
+		if retryType == NEW {
+			// 특정 신규 가맹점 재 수집인 경우는 오늘 가입한 가맹점만 돈다.
+			sendDt = "------" // 전송일을 특정 할 수 있게 해준다. (나중에 DB에서 변경)
+			today = bsDt      // 인자로 받은 날자를 조회일로 한다.
+			compInfors = getCompInfosByRestIDNew(restID, bsDt, today)
+		} else {
+			compInfors = getCompInfosByRestID(restID, bsDt)
+		}
 		if len(compInfors) == 0 {
-			lprintf(4, "[INFO] getCompInfosByRestID: not found compony info (rest=%s) \n", restID)
+			lprintf(4, "[INFO] getCompInfosByRestID: not found company info (rest=%s) \n", restID)
 			return -3
 		}
 	}
@@ -248,7 +270,7 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 
 	// 수집일수 체크
 	var searchDay int
-	if searchTy == MON { //	전달 1일 부터 수집 newMember 호출시 (최초수집)
+	if searchTy == MON { //	월간 조회 전달 1일 부터 수집
 		currentYear, currentMonth, _ := timeBsDt.Date()
 		firstOfMonth := time.Date(currentYear, currentMonth, 1, 0, 0, 0, 0, timeBsDt.Location())
 		firstOfMonth = firstOfMonth.AddDate(0, -1, 0)
@@ -291,8 +313,8 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 					lprintf(4, "[INFO][go-%d] today collect success already (%s)\n", goID, comp.BizNum)
 					continue // return
 				}
-			} else if searchTy == WEK {
-				// 주간 조회시 오늘 업데이트 또는 인서트 되어서 정상 결과를 가진 것은 제외
+			} else if searchTy == WEK || searchTy == MON {
+				// 주간/월간 조회시 오늘 업데이트 또는 인서트 되어서 정상 결과를 가진 것은 제외
 				var newDateList []string
 				for _, eachDay := range dateList {
 					if syncInfos[eachDay].ErrCd != "0000" ||
@@ -337,7 +359,6 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 			// 2초만 휴식 빠르게 재시도 후 다음 기회를 노리자
 			time.Sleep(2 * time.Second)
 			result, _ = getSalesData(dateList[erridx:], goID, comp, grpIds[0].Code, cookie, sendDt)
-
 		}
 
 		// 최종 경과가 실패이면 다음 주기를 기다림
@@ -361,26 +382,11 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 			updateCompInfo(goID, comp.BizNum)
 			comp.LnFirstYn = "Y"
 		}
-
 		//		}()
 	}
 	//	wg.Wait()
 
 	sumCnt, retCnt := getResultCnt(bsDt, restID, serID)
-	// 신규 수집인 경우 에도 카카오 워크에 알림이 좋을 것 같음
-	if retryType == NEW {
-		if sumCnt > 0 {
-			errMsg := fmt.Sprintf("[%s] 신규 가입자 매출데이터 수집 성공 : restID (%s)", serID, restID)
-			sendChannel("신규 가맹점 수집 성공", errMsg, "655095")
-		} else {
-			errMsg := fmt.Sprintf("[%s] 신규 가입자 매출데이터 수집 실패 : restID (%s)", serID, restID)
-			sendChannel("신규 가맹점 수집 실패 발생", errMsg, "655095")
-			// 신규 가맹점 30초 후에 재시도 (NEW 가 아니므로 한번만 재시도 함.)
-			time.Sleep(60 * time.Second)
-			collect(MON, restID, "", POD)
-		}
-	}
-
 	lprintf(4, ">> collect END.... [%d:%s:%s][%d/%d] << \n", searchTy, restID, reqDt, sumCnt, len(compInfors))
 	lprintf(3, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
 

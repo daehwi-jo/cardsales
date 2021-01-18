@@ -72,6 +72,34 @@ func getCompInfos(serID, bsDt string) []CompInfoType {
 	return compInfos
 }
 
+// 여신데이터 수집대상 가맹점 신규 리스트 조회
+func getCompInfosNew(serID, bsDt, openDt string) []CompInfoType {
+	statement := "select a.BIZ_NUM, a.SVC_OPEN_DT, a.LN_FIRST_YN, a.LN_JOIN_TY, a.LN_ID, a.LN_PSW, a.LN_JOIN_STS_CD, " +
+		"IFNULL(b.BS_DT,'') as BS_DT, IFNULL(left(b.REG_DT,8),'') AS REG_DT, IFNULL(left(b.MOD_DT,8),'') AS MOD_DT, IFNULL(b.STS_CD,'') as STS_CD, IFNULL(b.ERR_CD,'') as ERRCD " +
+		"from cc_comp_inf a left join cc_sync_inf b on a.BIZ_NUM=b.BIZ_NUM and b.BS_DT=? " +
+		"where a.SER_ID=? and a.COMP_STS_CD=? and a.LN_JOIN_STS_CD=? and a.SVC_OPEN_DT=?;"
+
+	rows, err := cls.QueryDBbyParam(statement, bsDt, serID, "1", "1", openDt) // 여신협회가입상태, 금결원가입상태, 가입일자
+	if err != nil {
+		lprintf(1, "[ERROR] getCompInfo: cls.QueryDBbyParam error(%s) \n", err.Error())
+		return nil
+	}
+	defer rows.Close()
+
+	var compInfos []CompInfoType
+	for rows.Next() {
+		var compInfo CompInfoType
+		err := rows.Scan(&compInfo.BizNum, &compInfo.SvcOpenDt, &compInfo.LnFirstYn, &compInfo.LnJoinTy, &compInfo.LnID, &compInfo.LnPsw, &compInfo.LnJoinStsCd, &compInfo.BsDt, &compInfo.RegDt, &compInfo.ModDt, &compInfo.StsCd, &compInfo.ErrCd)
+		if err != nil {
+			lprintf(1, "[ERROR] getCompInfo: rows.Scan error(%s) \n", err.Error())
+			return nil
+		}
+		compInfos = append(compInfos, compInfo)
+	}
+
+	return compInfos
+}
+
 // 지정가맹점 여신데이터 수집 정보조회
 func getCompInfosByRestID(restID, bsDt string) []CompInfoType {
 	statement := "select a.BIZ_NUM, a.SVC_OPEN_DT, a.LN_FIRST_YN, a.LN_JOIN_TY, a.LN_ID, a.LN_PSW, a.LN_JOIN_STS_CD, " +
@@ -80,6 +108,34 @@ func getCompInfosByRestID(restID, bsDt string) []CompInfoType {
 		"where a.REST_ID=? and a.COMP_STS_CD=? and a.LN_JOIN_STS_CD=?;"
 
 	rows, err := cls.QueryDBbyParam(statement, bsDt, restID, "1", "1") // 여신협회가입상태, 금결원가입상태
+	if err != nil {
+		lprintf(1, "[ERROR] getCompInfo: cls.QueryDBbyParam error(%s) \n", err.Error())
+		return nil
+	}
+	defer rows.Close()
+
+	var compInfos []CompInfoType
+	for rows.Next() {
+		var compInfo CompInfoType
+		err := rows.Scan(&compInfo.BizNum, &compInfo.SvcOpenDt, &compInfo.LnFirstYn, &compInfo.LnJoinTy, &compInfo.LnID, &compInfo.LnPsw, &compInfo.LnJoinStsCd, &compInfo.BsDt, &compInfo.RegDt, &compInfo.ModDt, &compInfo.StsCd, &compInfo.ErrCd)
+		if err != nil {
+			lprintf(1, "[ERROR] getCompInfo: rows.Scan error(%s) \n", err.Error())
+			return nil
+		}
+		compInfos = append(compInfos, compInfo)
+	}
+
+	return compInfos
+}
+
+// 지정 신규 가맹점 여신데이터 수집 정보조회
+func getCompInfosByRestIDNew(restID, bsDt, openDt string) []CompInfoType {
+	statement := "select a.BIZ_NUM, a.SVC_OPEN_DT, a.LN_FIRST_YN, a.LN_JOIN_TY, a.LN_ID, a.LN_PSW, a.LN_JOIN_STS_CD, " +
+		"IFNULL(b.BS_DT,'') as BS_DT, IFNULL(left(b.REG_DT,8),'') AS REG_DT, IFNULL(left(b.MOD_DT,8),'') AS MOD_DT, IFNULL(b.STS_CD,'') as STS_CD, IFNULL(b.ERR_CD,'') as ERRCD " +
+		"from cc_comp_inf a left join cc_sync_inf b on a.BIZ_NUM=b.BIZ_NUM and b.BS_DT=? " +
+		"where a.REST_ID=? and a.COMP_STS_CD=? and a.LN_JOIN_STS_CD=? and a.SVC_OPEN_DT=?;"
+
+	rows, err := cls.QueryDBbyParam(statement, bsDt, restID, "1", "1", openDt) // 여신협회가입상태, 금결원가입상태
 	if err != nil {
 		lprintf(1, "[ERROR] getCompInfo: cls.QueryDBbyParam error(%s) \n", err.Error())
 		return nil
