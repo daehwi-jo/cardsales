@@ -22,6 +22,14 @@ import (
 var fname string
 var serID string
 var lprintf func(int, string, ...interface{}) = cls.Lprintf
+var searchTypeStr = map[int]string{
+	ONE: "ONE",
+	MON: "MON",
+	WEK: "WEK",
+	RTY: "RTY",
+	POD: "POD",
+	NEW: "NEW",
+}
 
 func main() {
 	fname = cls.Cls_conf(os.Args)
@@ -53,12 +61,12 @@ func main() {
 	}
 	wSchd, r := cls.GetTokenValue("WEEKSCHED", fname)
 	if r == cls.CONF_ERR {
-		lprintf(1, "[ERROR] CHANNEL not exist value\n")
+		lprintf(1, "[ERROR] WEEKSCHED not exist value\n")
 		return
 	}
 	mSchd, r := cls.GetTokenValue("MONSCHED", fname)
 	if r == cls.CONF_ERR {
-		lprintf(1, "[ERROR] CHANNEL not exist value\n")
+		lprintf(1, "[ERROR] MONSCHED not exist value\n")
 		return
 	}
 	cSchd, r := cls.GetTokenValue("CHANNEL", fname)
@@ -210,7 +218,7 @@ func callCollect(w http.ResponseWriter, r *http.Request) {
 
 func collect(searchTy int, restID, reqDt string, retryType int) int {
 	lprintf(3, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
-	lprintf(4, ">> collect START .... [%d:%s:%s] << \n", searchTy, restID, reqDt)
+	lprintf(4, ">> collect START .... [%s:%s:%s:%s] << \n", searchTypeStr[searchTy], searchTypeStr[retryType], restID, reqDt)
 
 	// 수집일자
 	today := time.Now().Format("20060102")
@@ -387,7 +395,7 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 	//	wg.Wait()
 
 	sumCnt, retCnt := getResultCnt(bsDt, restID, serID)
-	lprintf(4, ">> collect END.... [%d:%s:%s][%d/%d] << \n", searchTy, restID, reqDt, sumCnt, len(compInfors))
+	lprintf(4, ">> collect END.... [%s:%s:%s:%s][%d/%d] << \n", searchTypeStr[searchTy], searchTypeStr[retryType], restID, reqDt, sumCnt, len(compInfors))
 	lprintf(3, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
 
 	if retryType == RTY {

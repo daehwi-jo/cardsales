@@ -48,10 +48,10 @@ func getResultCnt(bsDt, restID, serID string) (int, int) {
 func getCompInfos(serID, bsDt string) []CompInfoType {
 	statement := "select a.BIZ_NUM, a.SVC_OPEN_DT, a.LN_FIRST_YN, a.LN_JOIN_TY, a.LN_ID, a.LN_PSW, a.LN_JOIN_STS_CD, " +
 		"IFNULL(b.BS_DT,'') as BS_DT, IFNULL(left(b.REG_DT,8),'') AS REG_DT, IFNULL(left(b.MOD_DT,8),'') AS MOD_DT, IFNULL(b.STS_CD,'') as STS_CD, IFNULL(b.ERR_CD,'') as ERRCD " +
-		"from cc_comp_inf a left join cc_sync_inf b on a.BIZ_NUM=b.BIZ_NUM and b.BS_DT=? " +
-		"where a.SER_ID=? and a.COMP_STS_CD=? and a.LN_JOIN_STS_CD=? and b.SITE_CD=?;"
+		"from cc_comp_inf a left join cc_sync_inf b on a.BIZ_NUM=b.BIZ_NUM and b.BS_DT=? and b.SITE_CD=? " +
+		"where a.SER_ID=? and a.COMP_STS_CD=? and a.LN_JOIN_STS_CD=?;"
 
-	rows, err := cls.QueryDBbyParam(statement, bsDt, serID, "1", "1", siteCd) // 여신협회가입상태, 금결원가입상태
+	rows, err := cls.QueryDBbyParam(statement, bsDt, siteCd, serID, "1", "1") // 여신협회가입상태, 금결원가입상태
 	if err != nil {
 		lprintf(1, "[ERROR] getCompInfo: cls.QueryDBbyParam error(%s) \n", err.Error())
 		return nil
@@ -76,10 +76,10 @@ func getCompInfos(serID, bsDt string) []CompInfoType {
 func getCompInfosNew(serID, bsDt, openDt string) []CompInfoType {
 	statement := "select a.BIZ_NUM, a.SVC_OPEN_DT, a.LN_FIRST_YN, a.LN_JOIN_TY, a.LN_ID, a.LN_PSW, a.LN_JOIN_STS_CD, " +
 		"IFNULL(b.BS_DT,'') as BS_DT, IFNULL(left(b.REG_DT,8),'') AS REG_DT, IFNULL(left(b.MOD_DT,8),'') AS MOD_DT, IFNULL(b.STS_CD,'') as STS_CD, IFNULL(b.ERR_CD,'') as ERRCD " +
-		"from cc_comp_inf a left join cc_sync_inf b on a.BIZ_NUM=b.BIZ_NUM and b.BS_DT=? " +
-		"where a.SER_ID=? and a.COMP_STS_CD=? and a.LN_JOIN_STS_CD=? and a.SVC_OPEN_DT=? and b.SITE_CD=?;"
+		"from cc_comp_inf a left join cc_sync_inf b on a.BIZ_NUM=b.BIZ_NUM and b.BS_DT=? and b.SITE_CD=? " +
+		"where a.SER_ID=? and a.COMP_STS_CD=? and a.LN_JOIN_STS_CD=? and a.SVC_OPEN_DT=?;"
 
-	rows, err := cls.QueryDBbyParam(statement, bsDt, serID, "1", "1", openDt, siteCd) // 여신협회가입상태, 금결원가입상태, 가입일자
+	rows, err := cls.QueryDBbyParam(statement, bsDt, siteCd, serID, "1", "1", openDt) // 여신협회가입상태, 금결원가입상태, 가입일자
 	if err != nil {
 		lprintf(1, "[ERROR] getCompInfo: cls.QueryDBbyParam error(%s) \n", err.Error())
 		return nil
@@ -104,10 +104,10 @@ func getCompInfosNew(serID, bsDt, openDt string) []CompInfoType {
 func getCompInfosByRestID(restID, bsDt string) []CompInfoType {
 	statement := "select a.BIZ_NUM, a.SVC_OPEN_DT, a.LN_FIRST_YN, a.LN_JOIN_TY, a.LN_ID, a.LN_PSW, a.LN_JOIN_STS_CD, " +
 		"IFNULL(b.BS_DT,'') as BS_DT, IFNULL(left(b.REG_DT,8),'') AS REG_DT, IFNULL(left(b.MOD_DT,8),'') AS MOD_DT, IFNULL(b.STS_CD,'') as STS_CD, IFNULL(b.ERR_CD,'') as ERRCD " +
-		"from cc_comp_inf a left join cc_sync_inf b on a.BIZ_NUM=b.BIZ_NUM and b.BS_DT=? " +
-		"where a.REST_ID=? and a.COMP_STS_CD=? and a.LN_JOIN_STS_CD=? and b.SITE_CD=?;"
+		"from cc_comp_inf a left join cc_sync_inf b on a.BIZ_NUM=b.BIZ_NUM and b.BS_DT=? and b.SITE_CD=? " +
+		"where a.REST_ID=? and a.COMP_STS_CD=? and a.LN_JOIN_STS_CD=?;"
 
-	rows, err := cls.QueryDBbyParam(statement, bsDt, restID, "1", "1", siteCd) // 여신협회가입상태, 금결원가입상태
+	rows, err := cls.QueryDBbyParam(statement, bsDt, siteCd, restID, "1", "1") // 여신협회가입상태, 금결원가입상태
 	if err != nil {
 		lprintf(1, "[ERROR] getCompInfo: cls.QueryDBbyParam error(%s) \n", err.Error())
 		return nil
@@ -132,10 +132,10 @@ func getCompInfosByRestID(restID, bsDt string) []CompInfoType {
 func getCompInfosByRestIDNew(restID, bsDt, openDt string) []CompInfoType {
 	statement := "select a.BIZ_NUM, a.SVC_OPEN_DT, a.LN_FIRST_YN, a.LN_JOIN_TY, a.LN_ID, a.LN_PSW, a.LN_JOIN_STS_CD, " +
 		"IFNULL(b.BS_DT,'') as BS_DT, IFNULL(left(b.REG_DT,8),'') AS REG_DT, IFNULL(left(b.MOD_DT,8),'') AS MOD_DT, IFNULL(b.STS_CD,'') as STS_CD, IFNULL(b.ERR_CD,'') as ERRCD " +
-		"from cc_comp_inf a left join cc_sync_inf b on a.BIZ_NUM=b.BIZ_NUM and b.BS_DT=? " +
-		"where a.REST_ID=? and a.COMP_STS_CD=? and a.LN_JOIN_STS_CD=? and a.SVC_OPEN_DT=? and b.SITE_CD=?;"
+		"from cc_comp_inf a left join cc_sync_inf b on a.BIZ_NUM=b.BIZ_NUM and b.BS_DT=? and b.SITE_CD=? " +
+		"where a.REST_ID=? and a.COMP_STS_CD=? and a.LN_JOIN_STS_CD=? and a.SVC_OPEN_DT=?;"
 
-	rows, err := cls.QueryDBbyParam(statement, bsDt, restID, "1", "1", openDt, siteCd) // 여신협회가입상태, 금결원가입상태
+	rows, err := cls.QueryDBbyParam(statement, bsDt, siteCd, restID, "1", "1", openDt) // 여신협회가입상태, 금결원가입상태
 	if err != nil {
 		lprintf(1, "[ERROR] getCompInfo: cls.QueryDBbyParam error(%s) \n", err.Error())
 		return nil
