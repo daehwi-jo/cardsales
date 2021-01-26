@@ -413,9 +413,9 @@ func callChannel() {
 	compInfors := getCompInfos(serID, bsDt)
 
 	// 수집결과 체크
-	sumCnt, retCnt := getResultCnt(bsDt, "", serID)
+	sumCnt, _ := getResultCnt(bsDt, "", serID)
 
-	if sumCnt == len(compInfors) && retCnt > 0 {
+	if sumCnt == len(compInfors) {
 		errMsg := fmt.Sprintf("[%s]매출데이터 수집 전체 성공 (%d/%d store)", serID, sumCnt, len(compInfors))
 		sendChannel("전체 가맹점 수집 성공", errMsg, "655403")
 	} else {

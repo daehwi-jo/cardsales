@@ -18,12 +18,12 @@ func getResultCnt(bsDt, restID, serID string) (int, int) {
 
 	if len(restID) == 0 {
 		statement = "select COUNT(a.BIZ_NUM), SUM(IF(RIGHT(a.MOD_DT,6) > DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 10 MINUTE), '%H%i%s') || RIGHT(a.REG_DT,6) > DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 10 MINUTE), '%H%i%s'),1,0)) " +
-			"from cc_sync_inf a, cc_comp_inf b where a.BS_DT=? and a.ERR_CD=? and a.BIZ_NUM = b.BIZ_NUM and b.SER_ID=?"
-		rows, err = cls.QueryDBbyParam(statement, bsDt, "0000", serID)
+			"from cc_sync_inf a, cc_comp_inf b where a.BS_DT=? and a.ERR_CD=? and a.BIZ_NUM = b.BIZ_NUM and a.SITE_CD=? and b.SER_ID=?"
+		rows, err = cls.QueryDBbyParam(statement, bsDt, "0000", siteCd, serID)
 	} else {
-		statement = "select COUNT(a.BIZ_NUM), 0 " +
-			"from cc_sync_inf a, cc_comp_inf b where a.BS_DT=? and a.ERR_CD=? and a.BIZ_NUM = b.BIZ_NUM and b.REST_ID=?"
-		rows, err = cls.QueryDBbyParam(statement, bsDt, "0000", restID)
+		statement = "select COUNT(a.BIZ_NUM), SUM(IF(RIGHT(a.MOD_DT,6) > DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 10 MINUTE), '%H%i%s') || RIGHT(a.REG_DT,6) > DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 10 MINUTE), '%H%i%s'),1,0)) " +
+			"from cc_sync_inf a, cc_comp_inf b where a.BS_DT=? and a.ERR_CD=? and a.BIZ_NUM = b.BIZ_NUM and a.SITE_CD=? and b.REST_ID=?"
+		rows, err = cls.QueryDBbyParam(statement, bsDt, "0000", siteCd, restID)
 	}
 
 	if err != nil {
