@@ -496,7 +496,7 @@ func insertData(goID, queryTy int, paramPtr []string, dataTy interface{}) int {
 
 		weekend := "WD"
 		week := time.Now().Weekday()
-		if week == 0 || week == 6 {
+		if week == 0 || week == 7 {
 			weekend = "HD"
 		}
 		fields = append(fields, "WEEK_END")
