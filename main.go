@@ -20,7 +20,7 @@ import (
 )
 
 var fname string
-var serID string
+var serID, serTy string
 var lprintf func(int, string, ...interface{}) = cls.Lprintf
 var searchTypeStr = map[int]string{
 	ONE: "ONE",
@@ -52,6 +52,14 @@ func main() {
 		return
 	}
 	serID = id
+
+	// SERVER TYPE ID setting
+	ty, r := cls.GetTokenValue("SERVER_TY", fname)
+	if r == cls.CONF_ERR {
+		lprintf(1, "[ERROR] SERVER_TY not exist value\n")
+		return
+	}
+	serTy = ty
 
 	// SCHEDULER setting
 	sch, r := cls.GetTokenValue("SCHEDULER", fname)
@@ -407,6 +415,11 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 
 // channel push (결과)
 func callChannel() {
+	if strings.Compare(serTy, "TST") == 0 {
+		lprintf(4, "[INFO] Do not send push to channel in TEST ")
+		return
+	}
+
 	bsDt := time.Now().AddDate(0, 0, -1).Format("20060102")
 
 	// 수집 대상 회사
@@ -680,17 +693,28 @@ func getApproval(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 			}
 		}
 
-		// 취소건 원거래일자 업데이트
+		// 취소건일 경우 승인거래의 상태를 취소대응으로 변경 및 취소거래 원거래일자 업데이트
 		if len(updateOrgData) > 0 {
-			for _, orgData := range updateOrgData {
-				lprintf(4, "[INFO][go-%d] orgData(%v) \n", goID, orgData)
-				orgData.OrgTrDt = getOrgTrDt(goID, bizNum, orgData)
-				fields := []string{"ORG_TR_DT"}
+			lprintf(3, "[INFO][go-%d] updateOrgData(%v) \n", goID, updateOrgData)
+			for _, upData := range updateOrgData {
+				lprintf(4, "[INFO][go-%d] upData(%v) \n", goID, upData)
+
+				// 승인거래 상태변경
+				fields := []string{"STS_CD"}
 				wheres := []string{"BIZ_NUM", "APRV_NO", "CARD_NO", "APRV_CLSS"}
-				values := []string{orgData.OrgTrDt, bizNum, orgData.AuthNo, orgData.CardNo, "1"}
-				// "update cc_aprv_dtl set ORG_TR_DT=? where BIZ_NUM=? and APRV_NO=? and CARD_NO=? and APRV_CLSS=1;"
+				values := []string{"2", bizNum, upData.AuthNo, upData.CardNo, "0"}
+				// "update cc_aprv_dtl set STS_CD=? where BIZ_NUM=? and APRV_NO=? and CARD_NO=? and APRV_CLSS=0;"
 				ret := updateDetail(goID, ApprovalDetail, fields, wheres, values)
-				lprintf(3, "[INFO][go-%d] getApprovalDetail: org_tr_dt(%s) update (%d건)(%s,%s,%s) \n", goID, orgData.OrgTrDt, ret, bizNum, orgData.AuthNo, orgData.CardNo)
+				lprintf(3, "[INFO][go-%d] getApprovalDetail: sts_cd update (%d건)(%s,%s,%s) \n", goID, ret, bizNum, upData.AuthNo, upData.CardNo)
+
+				// 취소거래 원거래일자 변경
+				upData.OrgTrDt = getOrgTrDt(goID, bizNum, upData)
+				fields = []string{"ORG_TR_DT"}
+				wheres = []string{"BIZ_NUM", "APRV_NO", "CARD_NO", "APRV_CLSS"}
+				values = []string{upData.OrgTrDt, bizNum, upData.AuthNo, upData.CardNo, "1"}
+				// "update cc_aprv_dtl set ORG_TR_DT=? where BIZ_NUM=? and APRV_NO=? and CARD_NO=? and APRV_CLSS=1;"
+				ret = updateDetail(goID, ApprovalDetail, fields, wheres, values)
+				lprintf(3, "[INFO][go-%d] getApprovalDetail: org_tr_dt(%s) update (%d건)(%s,%s,%s) \n", goID, upData.OrgTrDt, ret, bizNum, upData.AuthNo, upData.CardNo)
 			}
 		}
 
@@ -723,7 +747,7 @@ func getApproval(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 }
 
 // 승인내역 상세 리스트
-func getApprovalDetail(goID int, cookie []*http.Cookie, bsDt, address string, comp CompInfoType, orgList *[]ApprovalDetailType) (int, int, string, []*http.Cookie) {
+func getApprovalDetail(goID int, cookie []*http.Cookie, bsDt, address string, comp CompInfoType, canList *[]ApprovalDetailType) (int, int, string, []*http.Cookie) {
 	referer := "https://www.cardsales.or.kr/page/approval/day"
 	respData, err, newCookie := reqHttpLoginAgain(goID, cookie, address, referer, comp)
 	if err != nil {
@@ -755,28 +779,11 @@ func getApprovalDetail(goID int, cookie []*http.Cookie, bsDt, address string, co
 
 	var sumAmt int
 	for _, approvalDetail := range approvalDetailList {
-		// 취소건일 경우 원거래의 상태를 취소로 변경
 		if strings.TrimSpace(approvalDetail.AuthClss) == "1" {
-			// 원거래일자 업데이트할 데이터 생성
-			var orgData ApprovalDetailType
-			orgData.BuzNo = bizNum
-			orgData.AuthNo = approvalDetail.AuthNo
-			orgData.CardNo = approvalDetail.CardNo
-			orgData.StsCd = "2"
-			orgData.AuthAmt = strings.Replace(approvalDetail.AuthAmt, "-", "", 1)
-			lprintf(3, "[INFO][go-%d] orgData(%v) \n", goID, orgData)
-			*orgList = append(*orgList, orgData)
-			lprintf(3, "[INFO][go-%d] orgList(%v) \n", goID, *orgList)
-
-			// approvalDetail.OrgTrDt = getOrgTrDt(goID, bizNum, approvalDetail)
 			approvalDetail.StsCd = "3"
 
-			fields := []string{"STS_CD"}
-			wheres := []string{"BIZ_NUM", "APRV_NO", "CARD_NO", "APRV_CLSS"}
-			values := []string{"2", bizNum, approvalDetail.AuthNo, approvalDetail.CardNo, "0"}
-			// "update cc_aprv_dtl set STS_CD=? where BIZ_NUM=? and APRV_NO=? and CARD_NO=? and APRV_CLSS=0;"
-			ret := updateDetail(goID, ApprovalDetail, fields, wheres, values)
-			lprintf(3, "[INFO][go-%d] getApprovalDetail: sts_cd update (%d건)(%s,%s,%s) \n", goID, ret, bizNum, approvalDetail.AuthNo, approvalDetail.CardNo)
+			// 취소 후처리 해야하는 데이터
+			*canList = append(*canList, approvalDetail)
 		} else {
 			approvalDetail.StsCd = "1"
 		}
@@ -955,12 +962,13 @@ func getPurchase(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 			loopCnt = loopCnt + 1
 		}
 
+		var updateOrgData []PurchaseDetailType
 		var detailCnt, detailAmt int
 		address = address + chkArrBaseUri + amtUri + tcntUri + chkArrUri
 		deleteDataTemp(goID, PurchaseTy, bizNum, bsDt)
 		for i := 1; i <= loopCnt; i++ {
 			tmpAddr := address + fmt.Sprintf("&q.dataPerPage=%d&currentPage=%d", datePerPage, i)
-			cnt, amt, errCd, newCookie := getPurchaseDetail(goID, cookie, bsDt, tmpAddr, comp)
+			cnt, amt, errCd, newCookie := getPurchaseDetail(goID, cookie, bsDt, tmpAddr, comp, &updateOrgData)
 			cookie = newCookie
 			if errCd != CcErrNo {
 				// lprintf(1, "[ERROR][go-%d] getPurchase: failed to get detail list from DB \n", goID)
@@ -995,6 +1003,21 @@ func getPurchase(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 			}
 		}
 
+		// 매입취소건일 경우 매입승인거래의 상태를 취소대응으로 변경
+		if len(updateOrgData) > 0 {
+			lprintf(3, "[INFO][go-%d] updateOrgData(%v) \n", goID, updateOrgData)
+			for _, upData := range updateOrgData {
+				lprintf(4, "[INFO][go-%d] upData(%v) \n", goID, upData)
+
+				fields := []string{"STS_CD"}
+				wheres := []string{"BIZ_NUM", "APRV_NO", "CARD_NO", "APRV_CLSS"}
+				values := []string{"2", bizNum, upData.AuthNo, upData.CardNo, "0"}
+				// "update cc_pca_dtl set STS_CD=? where BIZ_NUM=? and APRV_NO=? and CARD_NO=? and APRV_CLSS=0;"
+				ret := updateDetail(goID, PurchaseDetail, fields, wheres, values)
+				lprintf(3, "[INFO][go-%d] getPurchase: sts_cd update (%d건)(%s,%s,%s) \n", goID, ret, bizNum, upData.AuthNo, upData.CardNo)
+			}
+		}
+
 		// 합계, 상세내역 비교
 		sumAmt, err := strconv.Atoi(purchaseSum.ResultSum.PcaScdAmt)
 		if err != nil {
@@ -1020,7 +1043,7 @@ func getPurchase(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 }
 
 // 매입내역 상세 리스트
-func getPurchaseDetail(goID int, cookie []*http.Cookie, bsDt, address string, comp CompInfoType) (purCnt, putAmt int, errCd string, ncookie []*http.Cookie) {
+func getPurchaseDetail(goID int, cookie []*http.Cookie, bsDt, address string, comp CompInfoType, canList *[]PurchaseDetailType) (purCnt, putAmt int, errCd string, ncookie []*http.Cookie) {
 	referer := "https://www.cardsales.or.kr/page/purchase/day"
 	respData, err, newCookie := reqHttpLoginAgain(goID, cookie, address, referer, comp)
 	if err != nil {
@@ -1058,7 +1081,6 @@ func getPurchaseDetail(goID int, cookie []*http.Cookie, bsDt, address string, co
 		}
 		pcaSum = pcaSum + tmpAmt
 
-		// 취소건일 경우 원거래의 상태를 취소로 변경
 		if strings.TrimSpace(purchaseDetail.AuthClss) == "1" {
 			purchaseDetail.OrgTrDt = getRealTrDt(goID, bizNum, purchaseDetail)
 			if len(purchaseDetail.OrgTrDt) == 0 {
@@ -1068,12 +1090,8 @@ func getPurchaseDetail(goID int, cookie []*http.Cookie, bsDt, address string, co
 			}
 			purchaseDetail.StsCd = "3"
 
-			fields := []string{"STS_CD"}
-			wheres := []string{"BIZ_NUM", "APRV_NO", "CARD_NO", "APRV_CLSS"}
-			values := []string{"2", bizNum, purchaseDetail.AuthNo, purchaseDetail.CardNo, "0"}
-			// "update cc_pca_dtl set STS_CD=? where BIZ_NUM=? and APRV_NO=? and CARD_NO=? and APRV_CLSS=0;"
-			ret := updateDetail(goID, PurchaseDetail, fields, wheres, values)
-			lprintf(3, "[INFO][go-%d] getPurchaseDetail: sts_cd update (%d건)(%s,%s,%s) \n", goID, ret, bizNum, purchaseDetail.AuthNo, purchaseDetail.CardNo)
+			// 취소 후처리 해야하는 데이터
+			*canList = append(*canList, purchaseDetail)
 		} else {
 			purchaseDetail.OrgTrDt = purchaseDetail.TrnsDate
 			purchaseDetail.StsCd = "1"

@@ -494,11 +494,18 @@ func insertData(goID, queryTy int, paramPtr []string, dataTy interface{}) int {
 		inserts = append(inserts, "?")
 		paramPtr = append(paramPtr, time.Now().Format("20060102150405"))
 
+		// 조회기준일을 Time 값으로 변경
+		timeBsDt, err := time.Parse("20060102", paramPtr[1])
+		if err != nil {
+			lprintf(1, "[ERROR][go-%d] time.Parse (%s) \n", goID, err.Error())
+			return -2
+		}
 		weekend := "WD"
-		week := time.Now().Weekday()
+		week := timeBsDt.Weekday()
 		if week == 0 || week == 6 {
 			weekend = "HD"
 		}
+
 		fields = append(fields, "WEEK_END")
 		inserts = append(inserts, "?")
 		paramPtr = append(paramPtr, weekend)
@@ -772,11 +779,11 @@ func updateDetail(goID, queryTy int, fields, wheres, values []string) int {
 	return ret
 }
 
-// 매입취소건 승인테이블 실거래일자 조회(매입취소건의 거래일자는 승일일자가 전송됨)
+// 매입취소건 승인테이블 실거래일자 조회(매입취소건의 거래일자는 승인의 거래일자가 전송되므로 승인취소의 거래일자를 조회함)
 func getRealTrDt(goID int, bizNum string, purData PurchaseDetailType) string {
-	statement := "select TR_DT from cc_aprv_dtl where BIZ_NUM=? AND APRV_NO=? AND CARD_NO=? AND STS_CD=? AND APRV_AMT=?"
+	statement := "select TR_DT from cc_aprv_dtl where BIZ_NUM=? AND APRV_NO=? AND CARD_NO=? AND APRV_CLSS=? AND APRV_AMT=?"
 
-	rows, err := cls.QueryDBbyParam(statement, bizNum, purData.AuthNo, purData.CardNo, "3", purData.PcaAmt)
+	rows, err := cls.QueryDBbyParam(statement, bizNum, purData.AuthNo, purData.CardNo, "1", purData.PcaAmt)
 	if err != nil {
 		lprintf(1, "[ERROR][go-%d] cls.QueryDBbyParam error(%s) \n", goID, err.Error())
 		return ""
@@ -795,11 +802,12 @@ func getRealTrDt(goID int, bizNum string, purData PurchaseDetailType) string {
 	return orgTrDt
 }
 
-// 승인취소건 원거래일자 조회
+// 승인취소건 원거래일자 조회(승인일자 조회)
 func getOrgTrDt(goID int, bizNum string, aprvData ApprovalDetailType) string {
-	statement := "select TR_DT from cc_aprv_dtl where BIZ_NUM=? AND APRV_NO=? AND CARD_NO=? AND STS_CD=? AND APRV_AMT=?"
+	statement := "select TR_DT from cc_aprv_dtl where BIZ_NUM=? AND APRV_NO=? AND CARD_NO=? AND APRV_CLSS=? AND APRV_AMT=?"
 
-	rows, err := cls.QueryDBbyParam(statement, bizNum, aprvData.AuthNo, aprvData.CardNo, aprvData.StsCd, aprvData.AuthAmt)
+	authAmt := strings.Replace(aprvData.AuthAmt, "-", "", 1)
+	rows, err := cls.QueryDBbyParam(statement, bizNum, aprvData.AuthNo, aprvData.CardNo, "0", authAmt)
 	if err != nil {
 		lprintf(1, "[ERROR][go-%d] cls.QueryDBbyParam error(%s) \n", goID, err.Error())
 		return ""
