@@ -662,11 +662,34 @@ func getApproval(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 			detailCnt += cnt
 			detailAmt += amt
 		}
+
+		// 합계, 상세내역 비교
+		sumCnt, err := strconv.Atoi(approvalSum.ResultSum.TotTrnsCnt)
+		if err != nil {
+			lprintf(1, "[ERROR][go-%d] getApproval: data format (approvalSum.ResultSum.TotTrnsCnt:%s)", goID, approvalSum.ResultSum.TotTrnsCnt)
+			return "", "", CcErrDataFormat, cookie
+		}
+		sumAmt, err := strconv.Atoi(approvalSum.ResultSum.TotTrnsAmt)
+		if err != nil {
+			lprintf(1, "[ERROR][go-%d] getApproval: data format (approvalSum.ResultSum.TotTrnsAmt:%s)", goID, approvalSum.ResultSum.TotTrnsAmt)
+			return "", "", CcErrDataFormat, cookie
+		}
+
+		if sumCnt != detailCnt {
+			lprintf(1, "[ERROR][go-%d] getApproval: Differ to Approval Count sum(%d):detail(%d) \n", goID, sumCnt, detailCnt)
+			return "", "", CcErrApprCnt, cookie
+		}
+
+		if sumAmt != detailAmt {
+			lprintf(1, "[ERROR][go-%d] getApproval: Differ to Approval Amount sum(%d):detail(%d) \n", goID, sumAmt, detailAmt)
+			return "", "", CcErrApprAmt, cookie
+		}
+
 		// 승인내역 상세 리스트 기존것 삭제 후 DB저장
 		deleteData(goID, ApprovalTy, bizNum, bsDt)
 		moveData(goID, ApprovalTy, bizNum, bsDt)
 
-		// detail 저장 후 DB 저장 (detail 새로 저장시 기존거 지움)
+		// detail 저장 후 승인합계 DB 저장 (detail 새로 저장시 기존거 지움)
 		row := insertData(goID, ApprovalSum, paramStr, &approvalSum.ResultSum)
 		if row < 0 {
 			lprintf(1, "[ERROR][go-%d] getApproval: sum failed to store DB \n", goID)
@@ -681,7 +704,6 @@ func getApproval(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 		}
 
 		for _, approvalList := range approvalSum.ResultList {
-
 			// 승인내역 합계 리스트 DB저장
 			paramStr := make([]string, 0, 5)
 			paramStr = append(paramStr, bizNum)
@@ -716,28 +738,6 @@ func getApproval(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 				ret = updateDetail(goID, ApprovalDetail, fields, wheres, values)
 				lprintf(3, "[INFO][go-%d] getApprovalDetail: org_tr_dt(%s) update (%d건)(%s,%s,%s) \n", goID, upData.OrgTrDt, ret, bizNum, upData.AuthNo, upData.CardNo)
 			}
-		}
-
-		// 합계, 상세내역 비교
-		sumCnt, err := strconv.Atoi(approvalSum.ResultSum.TotTrnsCnt)
-		if err != nil {
-			lprintf(1, "[ERROR][go-%d] getApproval: data format (approvalSum.ResultSum.TotTrnsCnt:%s)", goID, approvalSum.ResultSum.TotTrnsCnt)
-			return "", "", CcErrDataFormat, cookie
-		}
-		sumAmt, err := strconv.Atoi(approvalSum.ResultSum.TotTrnsAmt)
-		if err != nil {
-			lprintf(1, "[ERROR][go-%d] getApproval: data format (approvalSum.ResultSum.TotTrnsAmt:%s)", goID, approvalSum.ResultSum.TotTrnsAmt)
-			return "", "", CcErrDataFormat, cookie
-		}
-
-		if sumCnt != detailCnt {
-			lprintf(1, "[ERROR][go-%d] getApproval: Differ to Approval Count sum(%d):detail(%d) \n", goID, sumCnt, detailCnt)
-			return "", "", CcErrApprCnt, cookie
-		}
-
-		if sumAmt != detailAmt {
-			lprintf(1, "[ERROR][go-%d] getApproval: Differ to Approval Amount sum(%d):detail(%d) \n", goID, sumAmt, detailAmt)
-			return "", "", CcErrApprAmt, cookie
 		}
 
 		return approvalSum.ResultSum.TotTrnsCnt, approvalSum.ResultSum.TotTrnsAmt, CcErrNo, cookie
@@ -980,11 +980,28 @@ func getPurchase(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 			detailAmt += amt
 		}
 
+		// 합계, 상세내역 비교
+		sumAmt, err := strconv.Atoi(purchaseSum.ResultSum.PcaScdAmt)
+		if err != nil {
+			lprintf(1, "[ERROR][go-%d] getPurchase: data format (purchaseSum.ResultSum.PcaCnt:%s)", goID, purchaseSum.ResultSum.PcaCnt)
+			return "", "", CcErrDataFormat, cookie
+		}
+
+		if sumCnt != detailCnt {
+			lprintf(1, "[ERROR][go-%d] getPurchase: differ to Purchase count sum(%d):detail(%d) \n", goID, sumCnt, detailCnt)
+			return "", "", CcErrPcaCnt, cookie
+		} else {
+			if sumAmt != detailAmt {
+				lprintf(1, "[ERROR][go-%d] getPurchase: differ to Purchase amount sum(%d):detail(%d) \n", goID, sumAmt, detailAmt)
+				return "", "", CcErrPcaAmt, cookie
+			}
+		}
+
 		// 매입내역 상세 리스트 기존 내용 삭제 후 DB저장
 		deleteData(goID, PurchaseTy, bizNum, bsDt)
 		moveData(goID, PurchaseTy, bizNum, bsDt)
 
-		// DB 저장
+		// detail 저장 후 매입 합계 DB 저장
 		row := insertData(goID, PurchaseSum, paramStr, &purchaseSum.ResultSum)
 		if row < 0 {
 			lprintf(1, "[ERROR][go-%d] getPurchase: Sum failed to store DB \n", goID)
@@ -1015,23 +1032,6 @@ func getPurchase(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 				// "update cc_pca_dtl set STS_CD=? where BIZ_NUM=? and APRV_NO=? and CARD_NO=? and APRV_CLSS=0;"
 				ret := updateDetail(goID, PurchaseDetail, fields, wheres, values)
 				lprintf(3, "[INFO][go-%d] getPurchase: sts_cd update (%d건)(%s,%s,%s) \n", goID, ret, bizNum, upData.AuthNo, upData.CardNo)
-			}
-		}
-
-		// 합계, 상세내역 비교
-		sumAmt, err := strconv.Atoi(purchaseSum.ResultSum.PcaScdAmt)
-		if err != nil {
-			lprintf(1, "[ERROR][go-%d] getPurchase: data format (purchaseSum.ResultSum.PcaCnt:%s)", goID, purchaseSum.ResultSum.PcaCnt)
-			return "", "", CcErrDataFormat, cookie
-		}
-
-		if sumCnt != detailCnt {
-			lprintf(1, "[ERROR][go-%d] getPurchase: differ to Purchase count sum(%d):detail(%d) \n", goID, sumCnt, detailCnt)
-			return "", "", CcErrPcaCnt, cookie
-		} else {
-			if sumAmt != detailAmt {
-				lprintf(1, "[ERROR][go-%d] getPurchase: differ to Purchase amount sum(%d):detail(%d) \n", goID, sumAmt, detailAmt)
-				return "", "", CcErrPcaAmt, cookie
 			}
 		}
 
@@ -1221,22 +1221,6 @@ func getPayment(goID int, cookie []*http.Cookie, startDate, endDate, grpId strin
 			return "", "", errCd, cookie
 		}
 
-		// 입금내역 상세 리스트 삭제 후 DB저장
-		deleteData(goID, PaymentTy, bizNum, startDate)
-		moveData(goID, PaymentTy, bizNum, startDate)
-
-		// 입금내역 합계 리스트 DB저장
-		for _, paymentList := range paymentSum.ResultList {
-			paramStr := make([]string, 0, 5)
-			paramStr = append(paramStr, bizNum)
-			paramStr = append(paramStr, strings.ReplaceAll(paymentList.PayDt, "-", ""))
-			row := insertData(goID, PaymentList, paramStr, &paymentList)
-			if row < 0 {
-				lprintf(1, "[ERROR][go-%d] getPayment: sum list failed to store DB \n", goID)
-				return "", "", CcErrDb, cookie
-			}
-		}
-
 		// 합계, 상세내역 비교
 		if sumCnt != detailCnt {
 			lprintf(1, "[ERROR][go-%d] getPayment: Differ to Payment count sum(%d):detail(%d) \n", goID, sumCnt, detailCnt)
@@ -1245,6 +1229,22 @@ func getPayment(goID int, cookie []*http.Cookie, startDate, endDate, grpId strin
 			if sumAmt != detailAmt {
 				lprintf(1, "[ERROR][go-%d] getPayment: Differ to Payment amount sum(%d):detail(%d) \n", goID, sumAmt, detailAmt)
 				return "", "", CcErrPayAmt, cookie
+			}
+		}
+
+		// 입금내역 상세 리스트 삭제 후 DB저장
+		deleteData(goID, PaymentTy, bizNum, startDate)
+		moveData(goID, PaymentTy, bizNum, startDate)
+
+		// detail 저장 후 입금내역 합계 리스트 DB저장
+		for _, paymentList := range paymentSum.ResultList {
+			paramStr := make([]string, 0, 5)
+			paramStr = append(paramStr, bizNum)
+			paramStr = append(paramStr, strings.ReplaceAll(paymentList.PayDt, "-", ""))
+			row := insertData(goID, PaymentList, paramStr, &paymentList)
+			if row < 0 {
+				lprintf(1, "[ERROR][go-%d] getPayment: sum list failed to store DB \n", goID)
+				return "", "", CcErrDb, cookie
 			}
 		}
 
