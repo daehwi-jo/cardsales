@@ -198,7 +198,7 @@ func reCollect(w http.ResponseWriter, r *http.Request) {
 // param(필수): restId, bsDt
 func weekCollects(w http.ResponseWriter, r *http.Request) {
 	bsDt := r.FormValue("bsDt")
-	lprintf(3, ">> callCollect START .... [%s] << \n", bsDt)
+	lprintf(3, ">> weekCollects START .... [%s] << \n", bsDt)
 
 	ret := collect(WEK, "", bsDt, POD)
 	if ret == 0 {
@@ -206,7 +206,7 @@ func weekCollects(w http.ResponseWriter, r *http.Request) {
 	} else {
 		fmt.Fprintf(w, "{\"code\":\"%d\",\"cnt\":\"%d\"}\n", http.StatusOK, ret)
 	}
-	lprintf(3, ">> callCollect END ....  << \n")
+	lprintf(3, ">> weekCollects END ....  << \n")
 }
 
 // 기본데이터 수집
@@ -1155,7 +1155,7 @@ func getPayment(goID int, cookie []*http.Cookie, startDate, endDate, grpId strin
 		// 입금내역 상세 조회
 		var sumCnt, sumAmt int
 		var stdDateArray, amt, tcnt string
-		deleteDataTemp(goID, PurchaseTy, bizNum, startDate)
+		deleteDataTemp(goID, PaymentTy, bizNum, startDate)
 		address := "https://www.cardsales.or.kr/page/api/payment/detailTermListAjax?" + "q.mode=&q.flag=&q.stdYear=&q.stdMonth=&q.pageType=" + "&q.merGrpId=" + grpId + "&q.cardCo=&q.merNo=" + "&q.startDate=" + startDate + "&q.endDate=" + endDate
 		for _, paymentList := range paymentSum.ResultList {
 			stdDateArray = stdDateArray + "&q.stdDateArray=" + paymentList.PayDt // 입금 일자
