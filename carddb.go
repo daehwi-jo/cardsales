@@ -679,71 +679,41 @@ func moveData(goID, ty int, bizNum, bsDt string) int {
 	return ret
 }
 
-// update approval status
-// func updateApprovalSts(goID int, stsCd, bizNum, apprNo, cardNo string) int {
-// 	var statememt = "update cc_aprv_dtl set STS_CD=? where BIZ_NUM=? and APRV_NO=? and CARD_NO=? and APRV_CLSS=0;"
+// update sum info
+func updateSum(goID, queryTy int, fields, wheres, values []string) int {
+	for i := 0; i < len(fields); i++ {
+		fields[i] = fields[i] + "=?"
+	}
+	for i := 0; i < len(wheres); i++ {
+		wheres[i] = wheres[i] + "=?"
+	}
 
-// 	var params []interface{}
-// 	params = append(params, stsCd)
-// 	params = append(params, bizNum)
-// 	params = append(params, apprNo)
-// 	params = append(params, cardNo)
+	var statememt string
+	if queryTy == ApprovalSum {
+		statememt = "update cc_aprv_sum set " + strings.Join(fields, ", ") + " where " + strings.Join(wheres, " and ")
+	} else if queryTy == PurchaseSum {
+		statememt = "update cc_pca_sum set " + strings.Join(fields, ", ") + " where " + strings.Join(wheres, " and ")
+	} else if queryTy == PaymentList {
+		statememt = "update cc_pay_lst set " + strings.Join(fields, ", ") + " where " + strings.Join(wheres, " and ")
+	} else {
+		lprintf(1, "[ERROR][go-%d] unknown query type (%s) \n", goID, queryTy)
+		return -1
+	}
 
-// 	// lprintf(4, "[INFO] statement=%s \n", statememt)
-// 	ret, err := cls.ExecDBbyParam(statememt, params)
-// 	if err != nil {
-// 		lprintf(1, "[ERROR][go-%d] cls.ExecDBbyParam error(%s) \n", goID, err.Error())
-// 		return -1
-// 	}
+	var params []interface{}
+	for _, value := range values {
+		params = append(params, value)
+	}
 
-// 	return ret
-// }
+	// lprintf(4, "[INFO][go-%d] statement=%s \n", goID, statememt)
+	ret, err := cls.ExecDBbyParam(statememt, params)
+	if err != nil {
+		lprintf(1, "[ERROR][go-%d] cls.ExecDBbyParam error(%s) \n", goID, err.Error())
+		return -1
+	}
 
-// update approval
-// func updateApprovalDtl(goID int, fields, wheres, values []string) int {
-// 	for i := 0; i < len(fields); i++ {
-// 		fields[i] = fields[i] + "=?"
-// 	}
-// 	for i := 0; i < len(wheres); i++ {
-// 		wheres[i] = wheres[i] + "=?"
-// 	}
-
-// 	statememt := "update cc_aprv_dtl set " + strings.Join(fields, ", ") + " where " + strings.Join(wheres, " and ")
-
-// 	var params []interface{}
-// 	for _, value := range values {
-// 		params = append(params, value)
-// 	}
-
-// 	// lprintf(4, "[INFO][go-%d] statement=%s \n", goID, statememt)
-// 	ret, err := cls.ExecDBbyParam(statememt, params)
-// 	if err != nil {
-// 		lprintf(1, "[ERROR][go-%d] cls.ExecDBbyParam error(%s) \n", goID, err.Error())
-// 		return -1
-// 	}
-
-// 	return ret
-// }
-
-// update purchase status
-// func updatePurchaseSts(goID int, stsCd, bizNum, apprNo, cardNo string) int {
-// 	var statememt = "update cc_pca_dtl set STS_CD=? where BIZ_NUM=? and APRV_NO=? and CARD_NO=? and APRV_CLSS=0;"
-
-// 	var params []interface{}
-// 	params = append(params, stsCd)
-// 	params = append(params, bizNum)
-// 	params = append(params, apprNo)
-// 	params = append(params, cardNo)
-
-// 	// lprintf(4, "[INFO] statement=%s \n", statememt)
-// 	ret, err := cls.ExecDBbyParam(statememt, params)
-// 	if err != nil {
-// 		lprintf(1, "[ERROR][go-%d] cls.ExecDBbyParam error(%s) \n", goID, err.Error())
-// 		return -1
-// 	}
-
-// 	return ret
-// }
+	return ret
+}
 
 // update detail info
 func updateDetail(goID, queryTy int, fields, wheres, values []string) int {

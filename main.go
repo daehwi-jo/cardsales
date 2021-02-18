@@ -370,11 +370,12 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 		}
 		lprintf(4, "[INFO][go-%d] getGrpId (%v) \n", goID, grpIds)
 
-		var result, erridx int
-		if result, erridx = getSalesData(dateList, goID, comp, grpIds[0].Code, cookie, sendDt); result == ERROR {
+		var result int
+		if result = getSalesData(&dateList, goID, comp, grpIds[0].Code, cookie, sendDt); result == ERROR {
 			// 2초만 휴식 빠르게 재시도 후 다음 기회를 노리자
 			time.Sleep(2 * time.Second)
-			result, _ = getSalesData(dateList[erridx:], goID, comp, grpIds[0].Code, cookie, sendDt)
+			lprintf(4, "[INFO][go-%d] retry search dateList (%v)\n", goID, dateList)
+			result = getSalesData(&dateList, goID, comp, grpIds[0].Code, cookie, sendDt)
 		}
 
 		// 최종 경과가 실패이면 다음 주기를 기다림
@@ -437,9 +438,10 @@ func callChannel() {
 	}
 }
 
-func getSalesData(dateList []string, goID int, comp CompInfoType, code string, cookies []*http.Cookie, sendDt string) (int, int) {
+func getSalesData(dateList *[]string, goID int, comp CompInfoType, code string, cookies []*http.Cookie, sendDt string) int {
 	bizNum := comp.BizNum
-	for i, selBsDt := range dateList {
+	var failDate []string
+	for _, selBsDt := range *dateList {
 		time.Sleep(1 * time.Second)
 		lprintf(3, "[INFO][go-%d] 수집일=%s\n", goID, selBsDt)
 		//////////////////////////////////////
@@ -449,7 +451,8 @@ func getSalesData(dateList []string, goID int, comp CompInfoType, code string, c
 			// Sync 결과 저장(오류)
 			sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, "0", "0", "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", apprErrCd, ""}
 			insertSync(goID, sync)
-			return ERROR, i
+			failDate = append(failDate, selBsDt)
+			continue
 		}
 		cookies = newCookie
 		//////////////////////////////////////
@@ -459,7 +462,8 @@ func getSalesData(dateList []string, goID int, comp CompInfoType, code string, c
 			// Sync 결과 저장(오류)
 			sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, apprCnt, apprAmt, "0", "0", "0", "0", time.Now().Format("20060102150405"), "", "2", pcaErrCd, ""}
 			insertSync(goID, sync)
-			return ERROR, i
+			failDate = append(failDate, selBsDt)
+			continue
 		}
 		cookies = newCookie
 		//////////////////////////////////////
@@ -469,7 +473,8 @@ func getSalesData(dateList []string, goID int, comp CompInfoType, code string, c
 			// Sync 결과 저장(오류)
 			sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, apprCnt, apprAmt, pcaCnt, pcaAmt, "0", "0", time.Now().Format("20060102150405"), "", "2", payErrCd, ""}
 			insertSync(goID, sync)
-			return ERROR, i
+			failDate = append(failDate, selBsDt)
+			continue
 		}
 
 		//////////////////////////////////////
@@ -478,8 +483,16 @@ func getSalesData(dateList []string, goID int, comp CompInfoType, code string, c
 		sync := SyncInfoType{bizNum, strings.ReplaceAll(selBsDt, "-", ""), siteCd, apprCnt, apprAmt, pcaCnt, pcaAmt, payCnt, payAmt, time.Now().Format("20060102150405"), "", "1", CcErrNo, sendDt}
 		// 과거와 변경이 없는 경우 업데이트를 하지 않아서, 금결원 파일 생성을 피함
 		insertSync(goID, sync)
+
+		lprintf(4, "[INFO][go-%d] failDate => %v \n", goID, failDate)
 	}
-	return NOERR, 0
+
+	if len(failDate) != 0 {
+		*dateList = failDate[:]
+		return ERROR
+	}
+
+	return NOERR
 }
 
 func login(goID int, loginId, password string) (*LoginResponse, error) {
@@ -604,20 +617,6 @@ func getApproval(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 	// DB의 데이터와 새로 수집한 데이터가 다른 경우, 재수집 후 삭제 -> insert
 	lprintf(3, "[INFO][go-%d] DB=%v\n", goID, *apprSum)
 	lprintf(3, "[INFO][go-%d] WEB=%v\n", goID, approvalSum.ResultSum)
-	/*
-			if apprSum.compare(approvalSum.ResultSum) == 0 {
-
-
-
-				// deleteSync(goID, bizNum, bsDt)
-				deleteData(goID, ApprovalTy, bizNum, bsDt)
-			} else {
-				// DB의 데이터와 수집데이터가 같은 경우, 정상 응답
-				lprintf(4, "[INFO][go-%d] getApproval: db approval sum amt (%v) = (%v) \n", goID, apprSum.TotTrnsAmt, approvalSum.ResultSum.TotTrnsAmt)
-				return approvalSum.ResultSum.TotTrnsCnt, approvalSum.ResultSum.TotTrnsAmt, CcErrSameData, cookie
-			}
-		}
-	*/
 
 	tranCnt, err := strconv.Atoi(approvalSum.ResultSum.TotTrnsCnt)
 	if err != nil {
@@ -661,28 +660,6 @@ func getApproval(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 
 			detailCnt += cnt
 			detailAmt += amt
-		}
-
-		// 합계, 상세내역 비교
-		sumCnt, err := strconv.Atoi(approvalSum.ResultSum.TotTrnsCnt)
-		if err != nil {
-			lprintf(1, "[ERROR][go-%d] getApproval: data format (approvalSum.ResultSum.TotTrnsCnt:%s)", goID, approvalSum.ResultSum.TotTrnsCnt)
-			return "", "", CcErrDataFormat, cookie
-		}
-		sumAmt, err := strconv.Atoi(approvalSum.ResultSum.TotTrnsAmt)
-		if err != nil {
-			lprintf(1, "[ERROR][go-%d] getApproval: data format (approvalSum.ResultSum.TotTrnsAmt:%s)", goID, approvalSum.ResultSum.TotTrnsAmt)
-			return "", "", CcErrDataFormat, cookie
-		}
-
-		if sumCnt != detailCnt {
-			lprintf(1, "[ERROR][go-%d] getApproval: Differ to Approval Count sum(%d):detail(%d) \n", goID, sumCnt, detailCnt)
-			return "", "", CcErrApprCnt, cookie
-		}
-
-		if sumAmt != detailAmt {
-			lprintf(1, "[ERROR][go-%d] getApproval: Differ to Approval Amount sum(%d):detail(%d) \n", goID, sumAmt, detailAmt)
-			return "", "", CcErrApprAmt, cookie
 		}
 
 		// 승인내역 상세 리스트 기존것 삭제 후 DB저장
@@ -738,6 +715,46 @@ func getApproval(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 				ret = updateDetail(goID, ApprovalDetail, fields, wheres, values)
 				lprintf(3, "[INFO][go-%d] getApprovalDetail: org_tr_dt(%s) update (%d건)(%s,%s,%s) \n", goID, upData.OrgTrDt, ret, bizNum, upData.AuthNo, upData.CardNo)
 			}
+		}
+
+		// 합계, 상세내역 비교
+		sumCnt, err := strconv.Atoi(approvalSum.ResultSum.TotTrnsCnt)
+		if err != nil {
+			lprintf(1, "[ERROR][go-%d] getApproval: data format (approvalSum.ResultSum.TotTrnsCnt:%s)", goID, approvalSum.ResultSum.TotTrnsCnt)
+			return "", "", CcErrDataFormat, cookie
+		}
+		sumAmt, err := strconv.Atoi(approvalSum.ResultSum.TotTrnsAmt)
+		if err != nil {
+			lprintf(1, "[ERROR][go-%d] getApproval: data format (approvalSum.ResultSum.TotTrnsAmt:%s)", goID, approvalSum.ResultSum.TotTrnsAmt)
+			return "", "", CcErrDataFormat, cookie
+		}
+
+		if sumCnt != detailCnt {
+			lprintf(1, "[ERROR][go-%d] getApproval: Differ to Approval Count sum(%d):detail(%d) \n", goID, sumCnt, detailCnt)
+
+			// 합계건수 수정
+			fields := []string{"TOT_CNT"}
+			wheres := []string{"BIZ_NUM", "BS_DT"}
+			values := []string{strconv.Itoa(detailCnt), bizNum, bsDt}
+			// "update cc_aprv_sum set TOT_CNT=? where BIZ_NUM=? and BS_DT=?;"
+			ret := updateSum(goID, ApprovalSum, fields, wheres, values)
+			lprintf(3, "[INFO][go-%d] getApproval: tot_cnt update (%d건)(%s,%s) \n", goID, ret, bizNum, bsDt)
+
+			return "", "", CcErrApprCnt, cookie
+		}
+
+		if sumAmt != detailAmt {
+			lprintf(1, "[ERROR][go-%d] getApproval: Differ to Approval Amount sum(%d):detail(%d) \n", goID, sumAmt, detailAmt)
+
+			// 합계금액 수정
+			fields := []string{"TOT_AMT"}
+			wheres := []string{"BIZ_NUM", "BS_DT"}
+			values := []string{strconv.Itoa(detailAmt), bizNum, bsDt}
+			// "update cc_aprv_sum set TOT_AMT=? where BIZ_NUM=? and BS_DT=?;"
+			ret := updateSum(goID, ApprovalSum, fields, wheres, values)
+			lprintf(3, "[INFO][go-%d] getApproval: tot_amt update (%d건)(%s,%s) \n", goID, ret, bizNum, bsDt)
+
+			return "", "", CcErrApprAmt, cookie
 		}
 
 		return approvalSum.ResultSum.TotTrnsCnt, approvalSum.ResultSum.TotTrnsAmt, CcErrNo, cookie
@@ -879,19 +896,7 @@ func getPurchase(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 	// DB의 데이터와 수집데이터가 다른 경우, 삭제 후 재수집
 	lprintf(4, "[INFO][go-%d] DB=%v\n", goID, *pcaSum)
 	lprintf(4, "[INFO][go-%d] WEB=%v\n", goID, purchaseSum.ResultSum)
-	/*
-			if pcaSum.compare(purchaseSum.ResultSum) == 0 {
 
-
-				// deleteSync(goID, bizNum, bsDt)
-				deleteData(goID, PurchaseTy, bizNum, bsDt)
-			} else {
-				// DB의 데이터와 수집데이터가 같은 경우, 정상 응답
-				lprintf(4, "[INFO][go-%d] getPurchase: db purchase sum same (%v) \n", goID, pcaSum)
-				return purchaseSum.ResultSum.PcaCnt, purchaseSum.ResultSum.PcaScdAmt, CcErrSameData, cookie
-			}
-		}
-	*/
 	cnt, err := strconv.Atoi(purchaseSum.ResultSum.PcaCnt)
 	if err != nil {
 		lprintf(1, "[ERROR][go-%d] getPurchase: data format (purchaseSum.ResultSum.PcaCnt:%s) \n", goID, purchaseSum.ResultSum.PcaCnt)
@@ -980,23 +985,6 @@ func getPurchase(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 			detailAmt += amt
 		}
 
-		// 합계, 상세내역 비교
-		sumAmt, err := strconv.Atoi(purchaseSum.ResultSum.PcaScdAmt)
-		if err != nil {
-			lprintf(1, "[ERROR][go-%d] getPurchase: data format (purchaseSum.ResultSum.PcaCnt:%s)", goID, purchaseSum.ResultSum.PcaCnt)
-			return "", "", CcErrDataFormat, cookie
-		}
-
-		if sumCnt != detailCnt {
-			lprintf(1, "[ERROR][go-%d] getPurchase: differ to Purchase count sum(%d):detail(%d) \n", goID, sumCnt, detailCnt)
-			return "", "", CcErrPcaCnt, cookie
-		} else {
-			if sumAmt != detailAmt {
-				lprintf(1, "[ERROR][go-%d] getPurchase: differ to Purchase amount sum(%d):detail(%d) \n", goID, sumAmt, detailAmt)
-				return "", "", CcErrPcaAmt, cookie
-			}
-		}
-
 		// 매입내역 상세 리스트 기존 내용 삭제 후 DB저장
 		deleteData(goID, PurchaseTy, bizNum, bsDt)
 		moveData(goID, PurchaseTy, bizNum, bsDt)
@@ -1033,6 +1021,41 @@ func getPurchase(goID int, cookie []*http.Cookie, bsDt, grpId string, comp CompI
 				ret := updateDetail(goID, PurchaseDetail, fields, wheres, values)
 				lprintf(3, "[INFO][go-%d] getPurchase: sts_cd update (%d건)(%s,%s,%s) \n", goID, ret, bizNum, upData.AuthNo, upData.CardNo)
 			}
+		}
+
+		// 합계, 상세내역 비교
+		sumAmt, err := strconv.Atoi(purchaseSum.ResultSum.PcaScdAmt)
+		if err != nil {
+			lprintf(1, "[ERROR][go-%d] getPurchase: data format (purchaseSum.ResultSum.PcaCnt:%s)", goID, purchaseSum.ResultSum.PcaCnt)
+			return "", "", CcErrDataFormat, cookie
+		}
+
+		if sumCnt != detailCnt {
+			lprintf(1, "[ERROR][go-%d] getPurchase: differ to Purchase count sum(%d):detail(%d) \n", goID, sumCnt, detailCnt)
+
+			// 합계건수 수정
+			fields := []string{"PCA_CNT"}
+			wheres := []string{"BIZ_NUM", "BS_DT"}
+			values := []string{strconv.Itoa(detailCnt), bizNum, bsDt}
+			// "update cc_pca_sum set PCA_CNT=? where BIZ_NUM=? and BS_DT=?;"
+			ret := updateSum(goID, PurchaseSum, fields, wheres, values)
+			lprintf(3, "[INFO][go-%d] getPurchase: pca_cnt update (%d건)(%s,%s) \n", goID, ret, bizNum, bsDt)
+
+			return "", "", CcErrPcaCnt, cookie
+		}
+
+		if sumAmt != detailAmt {
+			lprintf(1, "[ERROR][go-%d] getPurchase: differ to Purchase amount sum(%d):detail(%d) \n", goID, sumAmt, detailAmt)
+
+			// 합계금액 수정
+			fields := []string{"PCA_AMT"}
+			wheres := []string{"BIZ_NUM", "BS_DT"}
+			values := []string{strconv.Itoa(detailAmt), bizNum, bsDt}
+			// "update cc_pca_sum set PCA_AMT=? where BIZ_NUM=? and BS_DT=?;"
+			ret := updateSum(goID, PurchaseSum, fields, wheres, values)
+			lprintf(3, "[INFO][go-%d] getPurchase: pca_amt update (%d건)(%s,%s) \n", goID, ret, bizNum, bsDt)
+
+			return "", "", CcErrPcaAmt, cookie
 		}
 
 		return purchaseSum.ResultSum.PcaCnt, purchaseSum.ResultSum.PcaScdAmt, CcErrNo, cookie
@@ -1191,23 +1214,6 @@ func getPayment(goID int, cookie []*http.Cookie, startDate, endDate, grpId strin
 			// DB의 데이터와 수집데이터가 다른 경우, 삭제 후 재수집
 			lprintf(4, "[INFO][go-%d] DB=%v\n", goID, *paySum)
 			lprintf(4, "[INFO][go-%d] WEB=%v\n", goID, pay)
-			/*
-					lprintf(4, "[INFO][go-%d] getPayment: db payment sum (%v) \n", goID, paySum)
-					if paySum.compare(pay) == 0 {
-						// DB의 데이터와 수집데이터가 다른 경우, 삭제 후 재수집
-						lprintf(4, "[INFO][go-%d] DB=%v\n", goID, *paySum)
-						lprintf(4, "[INFO][go-%d] WEB=%v\n", goID, pay)
-
-						// deleteSync(goID, bizNum, startDate)
-						deleteData(goID, PaymentTy, bizNum, startDate)
-					} else {
-						// DB의 데이터와 수집데이터가 같은 경우, 정상 응답
-						lprintf(4, "[INFO][go-%d] getPayment: db Payment sum same (%v) \n", goID, paymentList.PayAmt)
-						return paymentList.PcaCnt, paymentList.PayAmt, CcErrSameData, cookie
-					}
-				}
-			*/
-
 		}
 
 		// detail
@@ -1219,17 +1225,6 @@ func getPayment(goID int, cookie []*http.Cookie, startDate, endDate, grpId strin
 			// lprintf(1, "[ERROR][go-%d] getPayment: failed to get detail list \n", goID)
 			deleteDataTemp(goID, ApprovalTy, bizNum, startDate)
 			return "", "", errCd, cookie
-		}
-
-		// 합계, 상세내역 비교
-		if sumCnt != detailCnt {
-			lprintf(1, "[ERROR][go-%d] getPayment: Differ to Payment count sum(%d):detail(%d) \n", goID, sumCnt, detailCnt)
-			return "", "", CcErrPayCnt, cookie
-		} else {
-			if sumAmt != detailAmt {
-				lprintf(1, "[ERROR][go-%d] getPayment: Differ to Payment amount sum(%d):detail(%d) \n", goID, sumAmt, detailAmt)
-				return "", "", CcErrPayAmt, cookie
-			}
 		}
 
 		// 입금내역 상세 리스트 삭제 후 DB저장
@@ -1246,6 +1241,35 @@ func getPayment(goID int, cookie []*http.Cookie, startDate, endDate, grpId strin
 				lprintf(1, "[ERROR][go-%d] getPayment: sum list failed to store DB \n", goID)
 				return "", "", CcErrDb, cookie
 			}
+		}
+
+		// 합계, 상세내역 비교
+		if sumCnt != detailCnt {
+			lprintf(1, "[ERROR][go-%d] getPayment: Differ to Payment count sum(%d):detail(%d) \n", goID, sumCnt, detailCnt)
+
+			// 합계건수 수정
+			fields := []string{"PCA_CNT"}
+			wheres := []string{"BIZ_NUM", "BS_DT"}
+			values := []string{strconv.Itoa(detailCnt), bizNum, startDate}
+			// "update cc_pay_lst set PCA_CNT=? where BIZ_NUM=? and BS_DT=?;"
+			ret := updateSum(goID, PaymentList, fields, wheres, values)
+			lprintf(3, "[INFO][go-%d] getPayment: pca_cnt update (%d건)(%s,%s) \n", goID, ret, bizNum, startDate)
+
+			return "", "", CcErrPayCnt, cookie
+		}
+
+		if sumAmt != detailAmt {
+			lprintf(1, "[ERROR][go-%d] getPayment: Differ to Payment amount sum(%d):detail(%d) \n", goID, sumAmt, detailAmt)
+
+			// 합계금액 수정
+			fields := []string{"PCA_AMT"}
+			wheres := []string{"BIZ_NUM", "BS_DT"}
+			values := []string{strconv.Itoa(detailAmt), bizNum, startDate}
+			// "update cc_pay_lst set PCA_AMT=? where BIZ_NUM=? and BS_DT=?;"
+			ret := updateSum(goID, PaymentList, fields, wheres, values)
+			lprintf(3, "[INFO][go-%d] getPayment: pca_amt update (%d건)(%s,%s) \n", goID, ret, bizNum, startDate)
+
+			return "", "", CcErrPayAmt, cookie
 		}
 
 		return strconv.Itoa(sumCnt), strconv.Itoa(sumAmt), CcErrNo, cookie
