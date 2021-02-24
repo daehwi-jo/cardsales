@@ -239,7 +239,7 @@ func collect(searchTy int, restID, reqDt string, retryType int) int {
 
 	// 21시가 지났거나 신규 가맹점은 수집 후 +1일에 전송
 	sendDt := today
-	nowTime := time.Now().Format("130405")
+	nowTime := time.Now().Format("150405")
 	if retryType == NEW || nowTime > "21" {
 		sendDt = time.Now().AddDate(0, 0, 1).Format("20060102")
 	}
